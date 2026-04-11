@@ -1,0 +1,54 @@
+# Don't copy these into the Docker image.
+# Keeps images small and protects against leaking secrets.
+
+# Secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# Git
+.git
+.gitignore
+.github
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv
+venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+*.egg-info
+
+# Databases (data should be mounted, not baked in)
+*.db
+*.sqlite
+*.sqlite3
+data/trialcat.db
+data/raw
+data/cache
+
+# IDE / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+*.swp
+
+# Docs and scratch
+docs
+scratch
+exploration
+*.md
+!backend/README.md
+
+# Fly.io state
+.fly

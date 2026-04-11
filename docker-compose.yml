@@ -1,0 +1,44 @@
+# trialcat — local development compose file
+# Run with: docker-compose up
+# Stop with: docker-compose down
+#
+# This file is for LOCAL DEV. Production deployment on Fly.io uses the
+# Dockerfile directly. Keep this file friendly for iteration: volume-mount
+# the code, enable reload, expose the DB directory, etc.
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trialcat:dev
+    container_name: trialcat-web
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Override Dockerfile CMD in dev so we get auto-reload on code changes.
+      # uvicorn watches /app/backend and restarts when Python files change.
+      APP_ENV: development
+    volumes:
+      # Mount source code so edits show up without rebuilding the image.
+      # Without this, every backend change requires `docker-compose build`.
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+      # Persist the SQLite database across container restarts.
+      - ./data:/app/data
+    # Override CMD for dev: add --reload so uvicorn restarts on code changes.
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --app-dir /app/backend
+      --reload
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
