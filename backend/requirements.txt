@@ -10,7 +10,10 @@ pydantic>=2.11.0,<3.0.0
 pydantic-settings>=2.10.1,<3.0.0
 
 # --- HTTP client for CT.gov API (Phase 2) ---
-httpx==0.28.1
+# Using `requests` instead of httpx because CT.gov uses TLS fingerprinting
+# (JA3/JA4) that blocks httpx's TLS handshake but allows requests through.
+# The ETL is a batch job so we don't need async HTTP anyway.
+requests==2.32.3
 
 # --- Rate limiting (Phase 6) ---
 slowapi==0.1.9
@@ -24,4 +27,5 @@ sqlalchemy==2.0.36
 # --- Dev / testing ---
 pytest==8.3.4
 pytest-asyncio==0.24.0
-httpx[cli]==0.28.1
+# httpx intentionally NOT listed - see note above on TLS fingerprinting.
+# If we ever need it for something specific, add it back deliberately.

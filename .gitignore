@@ -86,3 +86,9 @@ $RECYCLE.BIN/
 # Any scratch / exploration notebooks
 scratch/
 exploration/
+
+# Private planning roadmap (defensive — the real file lives outside this repo
+# but if anyone ever moves it in, don't accidentally publish our gotchas/notes)
+roadmap.md
+ROADMAP_PRIVATE.md
+docs/roadmap_private.md
