@@ -161,12 +161,15 @@ class TestParseTrialVEGFTrapEye:
         assert self.trial.primary_completion_date == date(2010, 10, 1)
         assert self.trial.completion_date == date(2012, 4, 1)
 
-    def test_enrollment_rate_computed(self):
+    def test_approx_enrollment_rate_computed(self):
         # ~15 months enrolling, 189 patients = ~12.6 patients/mo
+        # This is the APPROXIMATE rate (see column docstring for caveat).
         assert self.trial.months_enrolling is not None
         assert 14 < self.trial.months_enrolling < 16
-        assert self.trial.enrollment_rate_per_month is not None
-        assert 10 < self.trial.enrollment_rate_per_month < 14
+        assert self.trial.approx_enrollment_rate_per_month is not None
+        assert 10 < self.trial.approx_enrollment_rate_per_month < 14
+        # actual_enrollment_rate is None until we wire up resultsSection parsing (v2)
+        assert self.trial.actual_enrollment_rate_per_month is None
 
     def test_therapeutic_area_ophthalmology(self):
         # Macular Edema → Eye Diseases ancestor → Ophthalmology

@@ -94,17 +94,49 @@ class Trial(Base):
         doc="ACTUAL (trial completed enrollment) or ESTIMATED (target)",
     )
 
-    # --- Enrollment rate (computed in ETL, not by CT.gov) ---
+    # --- Enrollment rate (approximation from protocol dates) ---
     # These are the MONEY columns — what everything else in trialcat serves.
-    # Computed as: enrollment_count / months_enrolling
-    # where months_enrolling = (primary_completion - start) in months.
-    enrollment_rate_per_month: Mapped[Optional[float]] = mapped_column(
+    #
+    # IMPORTANT CAVEAT: this rate is an APPROXIMATION, not ground truth.
+    # CT.gov exposes `startDate` (first patient screened) and
+    # `primaryCompletionDate` (last primary outcome measurement), not a
+    # dedicated "enrollment end" date. For trials with long primary endpoints
+    # (e.g., 12-month follow-up), enrollment typically stops well before
+    # primaryCompletionDate, so dividing enrollment_count by the span between
+    # startDate and primaryCompletionDate underestimates the true per-month
+    # enrollment rate.
+    #
+    # The real numbers live in `resultsSection.participantFlowModule` for
+    # trials with posted results (~20% of the database). Populating
+    # `actual_enrollment_rate_per_month` from that source is v2 work.
+    #
+    # For MVP map aggregation, the approximation is "good enough" to compare
+    # trials within the same therapeutic area and filter cohort, but any
+    # public UI should label these numbers as "approximate" — clinical trial
+    # professionals will spot sloppy math in half a second.
+    approx_enrollment_rate_per_month: Mapped[Optional[float]] = mapped_column(
         nullable=True,
-        doc="Average patients enrolled per month over the enrollment period",
+        doc=(
+            "APPROXIMATE patients per month = enrollment_count / "
+            "months between startDate and primaryCompletionDate. "
+            "Overestimates duration for trials with long primary endpoints. "
+            "UI must label as 'approximate'."
+        ),
+    )
+    actual_enrollment_rate_per_month: Mapped[Optional[float]] = mapped_column(
+        nullable=True,
+        doc=(
+            "Ground-truth enrollment rate from resultsSection.participantFlowModule. "
+            "Only populated for ~20% of trials (those with posted results). "
+            "v2: separate ETL path to populate this from resultsSection."
+        ),
     )
     months_enrolling: Mapped[Optional[float]] = mapped_column(
         nullable=True,
-        doc="Duration of active enrollment in months",
+        doc=(
+            "APPROXIMATE duration from startDate to primaryCompletionDate. "
+            "Not true enrollment duration (see approx_enrollment_rate_per_month caveat)."
+        ),
     )
 
     # --- Therapeutic area (computed from MeSH hierarchy) ---

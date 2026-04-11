@@ -215,14 +215,19 @@ def parse_trial(raw: dict) -> tuple[Trial, list[Location], list[Intervention], l
     enrollment_count = enr_info.get("count")
     enrollment_type = enr_info.get("type")
 
-    # --- Computed enrollment rate ---
-    # Use primary_completion_date as "end of enrollment" — that's typically when
-    # enrollment stops. If missing, fall back to completion_date.
+    # --- Computed enrollment rate (APPROXIMATE) ---
+    # See Trial.approx_enrollment_rate_per_month docstring for the full
+    # caveat. In short: we use primary_completion_date as a proxy for
+    # "end of enrollment" because CT.gov doesn't give us a real enrollment
+    # end date. This overestimates duration for trials with long primary
+    # endpoints (overestimate duration → underestimate rate). The v2 ETL
+    # will fill `actual_enrollment_rate_per_month` from resultsSection when
+    # available.
     enrollment_end = primary_completion_date or completion_date
     months_enrolling = _months_between(start_date, enrollment_end)
-    enrollment_rate = None
+    approx_enrollment_rate = None
     if enrollment_count and months_enrolling and months_enrolling > 0:
-        enrollment_rate = round(enrollment_count / months_enrolling, 2)
+        approx_enrollment_rate = round(enrollment_count / months_enrolling, 2)
 
     # --- Sponsor ---
     sponsor_mod = proto.get("sponsorCollaboratorsModule", {})
@@ -257,7 +262,8 @@ def parse_trial(raw: dict) -> tuple[Trial, list[Location], list[Intervention], l
         completion_date_type=c_type,
         enrollment_count=enrollment_count,
         enrollment_type=enrollment_type,
-        enrollment_rate_per_month=enrollment_rate,
+        approx_enrollment_rate_per_month=approx_enrollment_rate,
+        actual_enrollment_rate_per_month=None,  # v2: populate from resultsSection
         months_enrolling=months_enrolling,
         therapeutic_area=therapeutic_area,
     )

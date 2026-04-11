@@ -16,16 +16,40 @@ Upsert strategy:
 """
 
 import logging
-from typing import Optional
+import time
+from typing import Optional, TypedDict
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Condition, Intervention, Location, Outcome, Trial, TrialCondition
-from app.services.geo import to_iso2
+from app.services.geo import to_iso2, to_us_state_code
 from app.services.parser import parse_trial
 
 logger = logging.getLogger(__name__)
+
+
+class LoadError(TypedDict):
+    """One trial that failed to load, for the stats summary."""
+
+    nct_id: Optional[str]
+    error_type: str
+    error_msg: str
+
+
+class LoadStats(TypedDict):
+    """Summary returned by load_trials.
+
+    loaded: number of trials successfully written
+    failed: number of trials that hit an error and were skipped
+    errors: list of LoadError dicts (capped to first N for huge batches)
+    duration_s: wall-clock time for the load phase in seconds
+    """
+
+    loaded: int
+    failed: int
+    errors: list[LoadError]
+    duration_s: float
 
 
 def _upsert_condition(session: Session, info: dict) -> Condition:
@@ -68,10 +92,16 @@ def load_trial(session: Session, raw: dict) -> Trial:
     """
     parsed_trial, locations, interventions, outcomes, condition_infos = parse_trial(raw)
 
-    # Fill in ISO country codes for locations (parser leaves this for the ETL layer
-    # because it depends on our geo service, which is an application concern)
+    # Fill in ISO country codes + USPS state codes for locations.
+    # Parser leaves this for the ETL layer because it depends on our geo
+    # service (application concern, not part of the pure parse function).
     for loc in locations:
         loc.country_code = to_iso2(loc.country)
+        # Only populate state_code for US locations — for international
+        # locations the `state` field holds provinces/regions that don't
+        # follow a standard short-code scheme.
+        if loc.country_code == "US":
+            loc.state_code = to_us_state_code(loc.state)
 
     # --- Upsert the trial ---
     existing = session.scalar(select(Trial).where(Trial.nct_id == parsed_trial.nct_id))
@@ -137,14 +167,100 @@ def load_trial(session: Session, raw: dict) -> Trial:
     return trial
 
 
-def load_trials(session: Session, raw_trials: list[dict]) -> int:
-    """Load many trials in one transaction. Returns the count loaded."""
-    count = 0
-    for raw in raw_trials:
+def load_trials(
+    session: Session,
+    raw_trials: list[dict],
+    log_every: int = 100,
+    max_errors_kept: int = 50,
+) -> LoadStats:
+    """Load many trials, tolerating per-trial failures.
+
+    Philosophy: a batch of 10,000 trials should not be killed by one
+    malformed row. We catch per-trial exceptions, log them, and continue.
+    But we do NOT swallow them silently — every failure gets a log entry
+    AND an entry in the returned stats dict so callers can decide what
+    to do (alert, retry, ignore).
+
+    Catastrophic errors (DB connection dropped, disk full, etc.) will
+    bubble up because they don't originate from a per-trial `load_trial`
+    call; they come from the session itself, and at that point there's
+    nothing safe we can do.
+
+    Args:
+        session: SQLAlchemy session (caller manages commit/rollback)
+        raw_trials: list of raw CT.gov trial dicts
+        log_every: emit a progress log every N trials (default 100)
+        max_errors_kept: cap the errors list at this many entries so huge
+            failed batches don't eat memory (default 50)
+
+    Returns:
+        LoadStats dict with loaded/failed counts, errors list, duration.
+    """
+    started = time.monotonic()
+    total = len(raw_trials)
+    loaded = 0
+    failed = 0
+    errors: list[LoadError] = []
+
+    for idx, raw in enumerate(raw_trials, start=1):
+        # Try to extract NCT ID early for error reporting — if even this
+        # fails, we use "unknown" and still count it as a failure.
+        nct_id: Optional[str] = None
+        try:
+            nct_id = (
+                raw.get("protocolSection", {})
+                .get("identificationModule", {})
+                .get("nctId")
+            )
+        except Exception:
+            pass
+
         try:
             load_trial(session, raw)
-            count += 1
+            loaded += 1
         except Exception as e:
-            logger.exception("Failed to load trial: %s", e)
-            raise
-    return count
+            failed += 1
+            # Keep the first N errors in the returned list to prevent
+            # unbounded memory use on huge failing batches.
+            if len(errors) < max_errors_kept:
+                errors.append(
+                    LoadError(
+                        nct_id=nct_id,
+                        error_type=type(e).__name__,
+                        error_msg=str(e)[:500],  # cap message length too
+                    )
+                )
+            # Log every failure at warning level — production monitoring
+            # should alert on non-zero failure counts anyway.
+            logger.warning(
+                "Failed to load trial %s: %s: %s",
+                nct_id or "<unknown>",
+                type(e).__name__,
+                e,
+            )
+
+        # Progress heartbeat
+        if log_every and idx % log_every == 0:
+            logger.info(
+                "ETL progress: %s/%s processed (%s loaded, %s failed)",
+                idx,
+                total,
+                loaded,
+                failed,
+            )
+
+    duration = time.monotonic() - started
+    logger.info(
+        "ETL complete: %s loaded, %s failed out of %s in %.1fs",
+        loaded,
+        failed,
+        total,
+        duration,
+    )
+
+    return LoadStats(
+        loaded=loaded,
+        failed=failed,
+        errors=errors,
+        duration_s=round(duration, 2),
+    )

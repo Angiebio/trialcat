@@ -1,34 +1,15 @@
 """ETL loader tests — verify parse → upsert → query roundtrip against fixtures.
 
-Uses an in-memory SQLite DB so each test gets a clean slate. This is the
-integration point between the parser and the database: if tables join
-correctly, if foreign keys enforce, if the upsert path works.
+Uses an in-memory SQLite DB (from conftest.db_session) so each test gets
+a clean slate. This is the integration point between the parser and the
+database: if tables join correctly, if foreign keys enforce, if the upsert
+path works.
 """
 
-import pytest
-from sqlalchemy import create_engine, select, func
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
 
 from app.etl.loader import load_trial, load_trials
-from app.models import Base, Condition, Intervention, Location, Outcome, Trial
-
-
-@pytest.fixture
-def db_session():
-    """Fresh in-memory SQLite database for each test function."""
-    engine = create_engine("sqlite:///:memory:", echo=False, future=True)
-    # Enable FK enforcement
-    from sqlalchemy import event
-
-    @event.listens_for(engine, "connect")
-    def _fk(dbapi_conn, _):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    Base.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
+from app.models import Condition, Intervention, Location, Outcome, Trial
 
 
 class TestLoadSingleTrial:
@@ -72,10 +53,14 @@ class TestLoadSingleTrial:
 
 class TestLoadManyTrials:
     def test_load_all_samples(self, db_session, ctgov_samples):
-        count = load_trials(db_session, ctgov_samples)
+        stats = load_trials(db_session, ctgov_samples)
         db_session.commit()
 
-        assert count == len(ctgov_samples)
+        # New LoadStats contract (Phase 2.5)
+        assert stats["loaded"] == len(ctgov_samples)
+        assert stats["failed"] == 0
+        assert stats["errors"] == []
+        assert stats["duration_s"] >= 0
 
         # Verify DB contains everything
         trial_count = db_session.scalar(select(func.count(Trial.nct_id)))
@@ -87,6 +72,34 @@ class TestLoadManyTrials:
             t = db_session.scalar(select(Trial).where(Trial.nct_id == nct))
             assert t is not None
             assert len(t.conditions) > 0, f"Trial {nct} has no conditions"
+
+
+class TestLoadFaultTolerance:
+    """load_trials must log-and-continue on per-trial failure, not crash the batch."""
+
+    def test_malformed_trial_is_recorded_not_raised(self, db_session, ctgov_samples):
+        # Inject a deliberately malformed "trial" between two good ones
+        malformed = {"protocolSection": {"identificationModule": {}}}  # missing nctId
+        batch = [ctgov_samples[0], malformed, ctgov_samples[1]]
+
+        stats = load_trials(db_session, batch)
+        db_session.commit()
+
+        # 2 good trials loaded, 1 bad trial skipped but recorded
+        assert stats["loaded"] == 2
+        assert stats["failed"] == 1
+        assert len(stats["errors"]) == 1
+        assert stats["errors"][0]["error_type"] in ("ValueError", "KeyError", "AttributeError")
+
+    def test_error_list_caps_at_max_errors_kept(self, db_session):
+        # Build a batch of N malformed trials with max_errors_kept=3
+        bad = [{"protocolSection": {"identificationModule": {}}} for _ in range(10)]
+        stats = load_trials(db_session, bad, max_errors_kept=3)
+
+        assert stats["loaded"] == 0
+        assert stats["failed"] == 10
+        # Only the first 3 errors were kept in the list
+        assert len(stats["errors"]) == 3
 
 
 class TestLoadIsIdempotent:

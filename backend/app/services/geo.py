@@ -182,3 +182,114 @@ def to_iso2(country_name: Optional[str]) -> Optional[str]:
         return to_iso2(stripped)
 
     return None
+
+
+# =============================================================================
+# US state normalization
+# =============================================================================
+# CT.gov stores US state as free-text in the `state` field: "California",
+# "New York", sometimes "NY", rarely the full ISO "US-CA". We normalize to
+# the USPS 2-letter code so Phase 4's US drill-down can aggregate cleanly
+# via `WHERE country_code='US' AND state_code='CA'`.
+#
+# Includes all 50 states, DC, and commonly-seen US territories. Not included:
+# misspellings, abbreviations with periods ("N.Y."), historic names.
+
+US_STATE_NAME_TO_CODE: dict[str, str] = {
+    "Alabama": "AL",
+    "Alaska": "AK",
+    "Arizona": "AZ",
+    "Arkansas": "AR",
+    "California": "CA",
+    "Colorado": "CO",
+    "Connecticut": "CT",
+    "Delaware": "DE",
+    "District of Columbia": "DC",
+    "Florida": "FL",
+    "Georgia": "GA",
+    "Hawaii": "HI",
+    "Idaho": "ID",
+    "Illinois": "IL",
+    "Indiana": "IN",
+    "Iowa": "IA",
+    "Kansas": "KS",
+    "Kentucky": "KY",
+    "Louisiana": "LA",
+    "Maine": "ME",
+    "Maryland": "MD",
+    "Massachusetts": "MA",
+    "Michigan": "MI",
+    "Minnesota": "MN",
+    "Mississippi": "MS",
+    "Missouri": "MO",
+    "Montana": "MT",
+    "Nebraska": "NE",
+    "Nevada": "NV",
+    "New Hampshire": "NH",
+    "New Jersey": "NJ",
+    "New Mexico": "NM",
+    "New York": "NY",
+    "North Carolina": "NC",
+    "North Dakota": "ND",
+    "Ohio": "OH",
+    "Oklahoma": "OK",
+    "Oregon": "OR",
+    "Pennsylvania": "PA",
+    "Rhode Island": "RI",
+    "South Carolina": "SC",
+    "South Dakota": "SD",
+    "Tennessee": "TN",
+    "Texas": "TX",
+    "Utah": "UT",
+    "Vermont": "VT",
+    "Virginia": "VA",
+    "Washington": "WA",
+    "West Virginia": "WV",
+    "Wisconsin": "WI",
+    "Wyoming": "WY",
+    # Territories
+    "Puerto Rico": "PR",
+    "Guam": "GU",
+    "American Samoa": "AS",
+    "Northern Mariana Islands": "MP",
+    "U.S. Virgin Islands": "VI",
+    "United States Virgin Islands": "VI",
+    "Virgin Islands": "VI",
+}
+
+# Reverse lookup for when CT.gov (or a user) passes in the code directly.
+# Values are the preferred canonical form of the 2-letter code.
+US_STATE_CODES: set[str] = set(US_STATE_NAME_TO_CODE.values())
+
+
+def to_us_state_code(state: Optional[str]) -> Optional[str]:
+    """Normalize a US state value to its USPS 2-letter code.
+
+    Accepts:
+    - Full state names: "California" → "CA"
+    - Existing 2-letter codes (case insensitive): "ca" → "CA"
+    - None or empty string → None
+
+    Returns None for unknown values. This is a SILENT None — it doesn't log
+    warnings — because the same function is called on non-US locations where
+    we expect it to return None. The ETL layer only calls this when
+    country_code == 'US'.
+    """
+    if not state:
+        return None
+
+    stripped = state.strip()
+    if not stripped:
+        return None
+
+    # Exact name match (case-insensitive)
+    for name, code in US_STATE_NAME_TO_CODE.items():
+        if name.lower() == stripped.lower():
+            return code
+
+    # 2-letter code passthrough
+    upper = stripped.upper()
+    if len(upper) == 2 and upper in US_STATE_CODES:
+        return upper
+
+    return None

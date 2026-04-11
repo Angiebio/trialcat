@@ -47,7 +47,16 @@ class Location(Base):
         String(64),
         nullable=True,
         index=True,
-        doc="US state name or international province; free-text, not normalized",
+        doc="US state name or international province; raw text from CT.gov",
+    )
+    state_code: Mapped[Optional[str]] = mapped_column(
+        String(2),
+        nullable=True,
+        index=True,
+        doc=(
+            "USPS 2-letter code for US locations (CA, NY, TX, ...). "
+            "None for non-US locations. Used by Phase 4's state-level drill-down."
+        ),
     )
     country: Mapped[Optional[str]] = mapped_column(
         String(128),

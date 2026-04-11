@@ -83,6 +83,7 @@ class CTGovClient:
         condition: Optional[str] = None,
         intervention: Optional[str] = None,
         location: Optional[str] = None,
+        sponsor: Optional[str] = None,
         status: Optional[list[str]] = None,
         phase: Optional[list[str]] = None,
         study_type: Optional[str] = None,
@@ -105,25 +106,65 @@ class CTGovClient:
             "countTotal": "true",
         }
 
-        # Build query.* parameters — CT.gov uses dotted query param names
+        # Free-text query parameters — CT.gov uses dotted names like query.cond
         if condition:
             params["query.cond"] = condition
         if intervention:
             params["query.intr"] = intervention
         if location:
             params["query.locn"] = location
+        if sponsor:
+            params["query.lead"] = sponsor
         if advanced_query:
             params["query.term"] = advanced_query
 
-        # filter.* parameters
-        if status:
-            params["filter.overallStatus"] = ",".join(status)
+        # Structured filters — CT.gov v2 uses `aggFilters` with comma-separated
+        # `facet:value` pairs. Phase values are short: 0/1/2/3/4/na.
+        # Status values are lowercase short codes: com, rec, act, ter, wit, etc.
+        # Learned the hard way (first attempt used filter.phase, which is invalid).
+        agg_filters: list[str] = []
 
-        # Phase and study type live under query.* in v2
         if phase:
-            params["query.phase"] = " OR ".join(phase)
+            phase_map = {
+                "EARLY_PHASE1": "0",
+                "PHASE1": "1",
+                "PHASE2": "2",
+                "PHASE3": "3",
+                "PHASE4": "4",
+                "NA": "na",
+            }
+            for p in phase:
+                short = phase_map.get(p.upper(), p.lower())
+                agg_filters.append(f"phase:{short}")
+
+        if status:
+            status_map = {
+                "RECRUITING": "rec",
+                "NOT_YET_RECRUITING": "not",
+                "ENROLLING_BY_INVITATION": "enr",
+                "ACTIVE_NOT_RECRUITING": "act",
+                "COMPLETED": "com",
+                "SUSPENDED": "sus",
+                "TERMINATED": "ter",
+                "WITHDRAWN": "wit",
+                "UNKNOWN": "unk",
+            }
+            for s in status:
+                short = status_map.get(s.upper(), s.lower())
+                agg_filters.append(f"status:{short}")
+
         if study_type:
-            params["query.studyType"] = study_type
+            # intr = interventional, obs = observational, exp = expanded access
+            study_type_map = {
+                "INTERVENTIONAL": "int",
+                "OBSERVATIONAL": "obs",
+                "EXPANDED_ACCESS": "exp",
+            }
+            short = study_type_map.get(study_type.upper(), study_type.lower())
+            agg_filters.append(f"studyType:{short}")
+
+        if agg_filters:
+            params["aggFilters"] = ",".join(agg_filters)
 
         if fields:
             params["fields"] = ",".join(fields)
