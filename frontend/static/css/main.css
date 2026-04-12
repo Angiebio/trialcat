@@ -414,6 +414,24 @@ a:hover { text-decoration-color: var(--c-orange); }
     line-height: 1.4;
 }
 
+.donate-btn {
+    display: inline-block;
+    padding: 5px 16px;
+    background: var(--c-green);
+    color: var(--c-purple) !important;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none !important;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+    transition: background 0.15s, transform 0.15s;
+}
+.donate-btn:hover {
+    background: var(--c-orange);
+    color: #fff !important;
+    transform: translateY(-1px);
+}
+
 /* ==========================================================================
    RESPONSIVE — collapse sidebar on mobile
    ========================================================================== */
