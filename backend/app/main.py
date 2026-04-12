@@ -23,6 +23,12 @@ from starlette.responses import HTMLResponse
 
 from app import __version__
 from app.config import settings
+from app.routes import (
+    aggregate_router,
+    filters_router,
+    stats_router,
+    trials_router,
+)
 
 # --- Logging setup ---
 # Configure at module import so even startup errors get formatted correctly.
@@ -79,6 +85,15 @@ TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+
+# --- API routers ---
+# Each group of endpoints lives in its own module under app.routes.
+# Mounting them here keeps main.py as a readable "what's in this app" index.
+app.include_router(filters_router)
+app.include_router(aggregate_router)
+app.include_router(stats_router)
+app.include_router(trials_router)
 
 
 # --- Routes ---
