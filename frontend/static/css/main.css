@@ -1,160 +1,436 @@
 /* trialcat — main stylesheet
  *
- * Pulls from the TRCL brand system (see TRCL-BRAND-STYLE-GUIDE-11APR2026).
- * Colors are locked; typography is deliberately deferred to Phase 2 per the
- * brand meta-rule: "No new project gets typography decisions until the
- * project works first." So we use system fonts here and pick Inter/Manrope
- * only once trialcat actually ships.
- *
- * Accessibility note: deep purple on cream passes WCAG AA at all sizes.
- * Bright green on cream is fine for accent elements (badges, borders) but
- * would fail on body text, so never use it there.
+ * TRCL brand system (TRCL-BRAND-STYLE-GUIDE-11APR2026).
+ * Colors locked; system fonts per "no typography until Phase 2" meta-rule.
+ * Map layout: sidebar-left + map-right, full viewport height.
  */
 
 :root {
     /* --- Brand palette (locked) --- */
-    --color-purple-deep: #4a0873;        /* primary brand, headers, body text */
-    --color-green-bright: #5bb545;       /* "yes" answers, accents, verdicts */
-    --color-green-accent: #c7e3b1;       /* soft callout backgrounds */
-    --color-yellow: #e8e52a;             /* attention-grabbers (sparing) */
-    --color-orange: #f5841f;             /* secondary accent, hover states */
+    --c-purple: #4a0873;
+    --c-purple-80: rgba(74, 8, 115, 0.80);
+    --c-purple-60: rgba(74, 8, 115, 0.60);
+    --c-purple-30: rgba(74, 8, 115, 0.30);
+    --c-green: #5bb545;
+    --c-green-soft: #c7e3b1;
+    --c-yellow: #e8e52a;
+    --c-orange: #f5841f;
+    --c-cream: #FAFAF5;
+    --c-cream-deep: #f5f1e8;
+    --c-border: #e8e4d6;
 
-    /* --- Neutrals (brand-safe) --- */
-    --color-bg-cream: #fafaf5;           /* brand background; not pure white */
-    --color-bg-cream-darker: #f2f0e6;    /* subtle section dividers */
-    --color-border: #e8e4d6;             /* hairline dividers on cream */
-
-    /* --- Text (deep purple, not pure black — brand rule) --- */
-    --color-text: rgba(74, 8, 115, 0.95);    /* headings: crisp purple */
-    --color-body: rgba(74, 8, 115, 0.80);    /* body: 80% softer */
-    --color-muted: rgba(74, 8, 115, 0.60);   /* captions, metadata */
-
-    /* --- Type stack (system fonts per brand meta-rule) --- */
-    --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                  "Helvetica Neue", Arial, sans-serif;
-    --font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", monospace;
+    /* --- Type (system fonts per brand meta-rule) --- */
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "SF Mono", Monaco, "Cascadia Code", monospace;
 
     /* --- Layout --- */
-    --max-width: 720px;
-    --spacing-unit: 8px;  /* brand rule: everything snaps to multiples of 8px */
+    --sidebar-width: 280px;
+    --header-height: 56px;
+    --footer-height: 40px;
 }
 
-* {
-    box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-html {
-    background: var(--color-bg-cream);
-}
-
-body {
+html, body {
     margin: 0;
-    padding: 40px 24px;  /* 5x8 top/bottom, 3x8 sides */
-    font-family: var(--font-stack);
-    font-size: 16px;
-    line-height: 1.6;
-    color: var(--color-body);
-    background: var(--color-bg-cream);
+    padding: 0;
+    height: 100%;
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--c-purple-80);
+    background: var(--c-cream);
     -webkit-font-smoothing: antialiased;
 }
 
-header,
-main,
-footer {
-    max-width: var(--max-width);
-    margin: 0 auto;
+a {
+    color: var(--c-purple);
+    text-decoration: underline;
+    text-decoration-color: var(--c-green);
+    text-underline-offset: 2px;
+}
+a:hover { text-decoration-color: var(--c-orange); }
+
+/* ==========================================================================
+   HEADER
+   ========================================================================== */
+
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--header-height);
+    padding: 0 16px;
+    background: var(--c-purple);
+    border-bottom: none;
+    z-index: 1000;
 }
 
-header {
-    padding-bottom: 32px;
-    border-bottom: 1px solid var(--color-border);
-    margin-bottom: 40px;
+.header-left {
+    display: flex;
+    align-items: center;
 }
 
-header h1 {
-    margin: 0;
-    font-size: 2.5rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--color-text);
+.logo {
+    height: 28px;
+    width: auto;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
 }
 
 .tagline {
-    margin: 8px 0 0 0;
-    color: var(--color-muted);
-    font-size: 1.1rem;
+    color: rgba(250, 250, 245, 0.70);
+    display: none;
+}
+@media (min-width: 768px) {
+    .tagline { display: inline; }
 }
 
-main section {
-    margin-bottom: 48px;
+.trcl-link {
+    color: rgba(250, 250, 245, 0.60);
+    font-size: 12px;
+    text-decoration: none;
+    border: 1px solid rgba(250, 250, 245, 0.25);
+    padding: 4px 10px;
+    border-radius: 999px;
+    transition: border-color 0.15s, color 0.15s;
+}
+.trcl-link:hover {
+    border-color: var(--c-green);
+    color: var(--c-green);
+    text-decoration: none;
 }
 
-.hero h2 {
-    margin-top: 0;
-    font-size: 1.5rem;
-    color: var(--color-purple-deep);
+/* ==========================================================================
+   APP LAYOUT — sidebar + map
+   ========================================================================== */
+
+.app-layout {
+    display: flex;
+    height: calc(100vh - var(--header-height) - var(--footer-height));
+}
+
+/* --- Sidebar --- */
+
+.sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    padding: 16px;
+    background: var(--c-cream);
+    border-right: 1px solid var(--c-border);
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.sidebar-title {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--c-purple);
+}
+
+.filter-group {
+    margin-bottom: 12px;
+}
+
+.filter-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--c-purple-60);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.filter-group select,
+.filter-group input[type="date"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--c-border);
+    border-radius: 4px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--c-purple-80);
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+    border-color: var(--c-green);
+    box-shadow: 0 0 0 2px rgba(91, 181, 69, 0.2);
+}
+
+.btn-apply {
+    width: 100%;
+    padding: 8px;
+    margin-top: 8px;
+    background: var(--c-purple);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-apply:hover { background: #5e109a; }
+
+.btn-reset {
+    width: 100%;
+    padding: 6px;
+    margin-top: 6px;
+    background: none;
+    color: var(--c-purple-60);
+    border: 1px solid var(--c-border);
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+.btn-reset:hover {
+    border-color: var(--c-purple);
+    color: var(--c-purple);
+}
+
+/* Sidebar stats summary */
+.sidebar-stats {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--c-border);
+}
+
+.stats-summary {
+    display: flex;
+    gap: 16px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--c-purple);
+    line-height: 1.1;
+}
+
+.stat-label {
+    font-size: 11px;
+    color: var(--c-purple-60);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* --- Map --- */
+
+.map-container {
+    flex: 1;
+    position: relative;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+.map-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(250, 250, 245, 0.85);
+    color: var(--c-purple);
+    font-weight: 600;
+    font-size: 16px;
+    z-index: 999;
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   LEAFLET ATTRIBUTION — required for OSM tiles, styled subtler
+   ========================================================================== */
+
+.leaflet-control-attribution {
+    font-size: 10px !important;
+    background: rgba(250, 250, 245, 0.6) !important;
+    color: var(--c-purple-60) !important;
+    padding: 2px 6px !important;
+}
+.leaflet-control-attribution a {
+    color: var(--c-purple-60) !important;
+    text-decoration: none !important;
+}
+
+/* ==========================================================================
+   POPUP STYLES (Leaflet popup override)
+   ========================================================================== */
+
+.trialcat-popup .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(74, 8, 115, 0.15);
+    border: 1px solid var(--c-border);
+}
+
+.trial-popup h3 {
+    margin: 0 0 8px 0;
+    font-size: 15px;
+    color: var(--c-purple);
     font-weight: 700;
 }
 
-.hero p {
-    color: var(--color-body);
-    max-width: 65ch;  /* brand rule: line length 65-75ch for body copy */
+.trial-popup table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
 }
 
-.status {
-    display: flex;
-    gap: 8px;
-    margin-top: 24px;
+.trial-popup td {
+    padding: 3px 8px 3px 0;
+    vertical-align: top;
 }
 
-.badge {
-    display: inline-block;
-    padding: 4px 12px;
-    background: var(--color-green-accent);
-    border-radius: 999px;
+.trial-popup td:first-child {
+    color: var(--c-purple-60);
+    white-space: nowrap;
+}
+
+.trial-popup td:last-child {
+    text-align: right;
     font-family: var(--font-mono);
-    font-size: 0.8rem;
-    color: var(--color-purple-deep);
-    font-weight: 500;
 }
 
-.about h3 {
-    font-size: 1.1rem;
-    margin-bottom: 8px;
-    color: var(--color-text);
+.trial-popup .section-header {
     font-weight: 600;
+    color: var(--c-purple);
+    padding-top: 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
-.about p {
-    color: var(--color-body);
-    max-width: 65ch;
+.popup-warning {
+    margin: 8px 0 0 0;
+    font-size: 11px;
+    color: var(--c-orange);
+    font-style: italic;
 }
 
-a {
-    color: var(--color-purple-deep);
-    text-decoration: underline;
-    text-decoration-color: var(--color-green-bright);
-    text-underline-offset: 3px;
-    text-decoration-thickness: 2px;
-    transition: text-decoration-color 0.15s ease;
+/* ==========================================================================
+   DRILL-DOWN CONTROLS
+   ========================================================================== */
+
+/* Popup action buttons row */
+.popup-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
 }
 
-a:hover {
-    text-decoration-color: var(--color-orange);
+/* "View by state" button inside the US popup */
+.popup-drilldown {
+    flex: 1;
+    padding: 6px 12px;
+    background: var(--c-purple);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: background 0.15s;
+}
+.popup-drilldown:hover { background: var(--c-green); color: var(--c-purple); }
+
+/* "Export CSV" button */
+.popup-export {
+    flex: 1;
+    padding: 6px 12px;
+    background: none;
+    color: var(--c-purple);
+    border: 1px solid var(--c-border);
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: border-color 0.15s, background 0.15s;
+}
+.popup-export:hover { border-color: var(--c-purple); background: var(--c-cream-deep); }
+
+/* "Back to world" button on the map (Leaflet custom control) */
+.back-to-world-btn {
+    background: var(--c-purple);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: background 0.15s;
+}
+.back-to-world-btn:hover { background: var(--c-green); color: var(--c-purple); }
+
+/* ==========================================================================
+   FOOTER
+   ========================================================================== */
+
+.app-footer {
+    min-height: var(--footer-height);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    background: var(--c-cream);
+    border-top: 1px solid var(--c-border);
+    font-size: 11px;
+    color: var(--c-purple-60);
+    gap: 2px;
 }
 
-footer {
-    padding-top: 32px;
-    border-top: 1px solid var(--color-border);
-    color: var(--color-muted);
-    font-size: 0.9rem;
+.app-footer p {
+    margin: 0;
     text-align: center;
+    line-height: 1.4;
 }
 
-/* Responsive — simple breakpoint for phones. Phase 4 will do proper
- * responsive design with the map component in mind. */
-@media (max-width: 600px) {
-    body { padding: 24px 16px; }
-    header h1 { font-size: 2rem; }
-    main section { margin-bottom: 32px; }
+/* ==========================================================================
+   RESPONSIVE — collapse sidebar on mobile
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .app-layout { flex-direction: column; }
+    .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: 200px;
+        border-right: none;
+        border-bottom: 1px solid var(--c-border);
+    }
+    .map-container {
+        height: calc(100vh - var(--header-height) - var(--footer-height) - 200px);
+    }
+    .filter-group { display: inline-block; width: 48%; margin-right: 2%; }
+    .btn-apply, .btn-reset { display: inline-block; width: 48%; }
+    .sidebar-stats { display: none; }
 }

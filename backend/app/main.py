@@ -113,6 +113,12 @@ async def index(request: Request) -> HTMLResponse:
     )
 
 
+@app.get("/terms", response_class=HTMLResponse, tags=["pages"])
+async def terms(request: Request) -> HTMLResponse:
+    """Terms of use and disclaimer page."""
+    return templates.TemplateResponse(request=request, name="terms.html")
+
+
 @app.get("/health", tags=["system"])
 async def health() -> JSONResponse:
     """Liveness probe. Fly.io (and UptimeRobot) will hit this to confirm the app is alive.
