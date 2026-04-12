@@ -1,8 +1,19 @@
-# Nightly ETL refresh — pulls trials updated in the last 2 days from CT.gov.
+# Nightly ETL refresh — pulls ONLY trials updated in the last 2 days from CT.gov.
+# This is NOT a full re-download. It's incremental: the /admin/etl/refresh endpoint
+# calculates "2 days ago" and passes updated_since=MM/DD/YYYY to the CT.gov API's
+# filter.advanced=AREA[LastUpdatePostDate]RANGE[date,MAX] parameter. Typically
+# fetches a few hundred to a few thousand trials per night, not 500K+.
+#
 # Runs at 4:00 AM UTC (midnight ET) so fresh data is ready by morning.
 # Two-day window ensures we never miss a trial that posted late in the day.
 #
-# Cost: $0 (GitHub Actions free tier covers this easily — it's one curl call)
+# Robustness:
+# - Retries the trigger up to 3 times (handles machine cold starts / transient errors)
+# - Wakes the Fly.io machine if it's sleeping (auto_start_machines = true)
+# - Polls for completion with clear timeout
+# - Fails the workflow if ETL reports errors (so GitHub sends notification email)
+#
+# Cost: $0 (GitHub Actions free tier — it's just curl + sleep)
 # Requires: TRIALCAT_ADMIN_SECRET set in repo Settings → Secrets → Actions
 
 name: Nightly CT.gov Refresh
@@ -12,7 +23,7 @@ on:
     # 4:00 AM UTC = midnight Eastern
     - cron: '0 4 * * *'
   workflow_dispatch:
-    # Manual trigger button in GitHub Actions UI — useful for testing
+    # Manual trigger button in GitHub Actions UI
     inputs:
       days:
         description: 'Days of history to refresh (default 2)'
@@ -25,50 +36,120 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      # Step 1: Wake the machine. Fly.io auto_stop means it might be sleeping.
+      # A simple GET to /health wakes it up. We retry because the first request
+      # during cold start can take 3-5 seconds and might time out.
+      - name: Wake the Fly.io machine
+        run: |
+          echo "Waking trialcat.fly.dev..."
+          for attempt in 1 2 3; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+              "https://trialcat.fly.dev/health" \
+              --max-time 15 2>/dev/null || echo "000")
+
+            if [ "${HTTP_CODE}" = "200" ]; then
+              echo "Machine is awake (attempt ${attempt})"
+              break
+            fi
+
+            echo "Attempt ${attempt}: got HTTP ${HTTP_CODE}, retrying in 10s..."
+            sleep 10
+          done
+
+          if [ "${HTTP_CODE}" != "200" ]; then
+            echo "::error::Could not wake machine after 3 attempts"
+            exit 1
+          fi
+
+      # Step 2: Trigger the incremental refresh. Retries up to 3 times
+      # because the first request after wake-up can occasionally fail.
       - name: Trigger incremental refresh
         run: |
           DAYS="${{ github.event.inputs.days || '2' }}"
           echo "Refreshing trials updated in the last ${DAYS} days..."
 
-          RESPONSE=$(curl -s -X POST \
-            "https://trialcat.fly.dev/admin/etl/refresh?days=${DAYS}" \
-            -H "X-Admin-Secret: ${{ secrets.TRIALCAT_ADMIN_SECRET }}" \
-            -H "Content-Type: application/json" \
-            --max-time 30)
+          for attempt in 1 2 3; do
+            RESPONSE=$(curl -s -X POST \
+              "https://trialcat.fly.dev/admin/etl/refresh?days=${DAYS}" \
+              -H "X-Admin-Secret: ${{ secrets.TRIALCAT_ADMIN_SECRET }}" \
+              -H "Content-Type: application/json" \
+              --max-time 30 2>/dev/null || echo '{"status":"curl_error"}')
 
-          echo "Response: ${RESPONSE}"
+            echo "Attempt ${attempt} response: ${RESPONSE}"
 
-          # Check if it started successfully
-          if echo "${RESPONSE}" | grep -q '"status":"started"'; then
-            echo "ETL refresh started successfully"
-          else
-            echo "WARNING: Unexpected response"
+            if echo "${RESPONSE}" | grep -q '"status":"started"'; then
+              echo "ETL refresh started successfully"
+              break
+            fi
+
+            # If already running from a previous attempt or stuck job, that's ok
+            if echo "${RESPONSE}" | grep -q '"status":"already_running"'; then
+              echo "ETL is already running — will monitor it"
+              break
+            fi
+
+            echo "Unexpected response, retrying in 15s..."
+            sleep 15
+          done
+
+          # Final check — if neither started nor already_running, fail
+          if ! echo "${RESPONSE}" | grep -qE '"status":"(started|already_running)"'; then
+            echo "::error::Failed to trigger ETL after 3 attempts. Response: ${RESPONSE}"
             exit 1
           fi
 
+      # Step 3: Poll for completion. Each nightly refresh is typically a few hundred
+      # to a few thousand trials, so it should finish in 1-10 minutes.
       - name: Wait for completion and report
         run: |
-          # Poll status every 30s for up to 20 minutes
+          echo "Polling ETL status every 30s (up to 20 minutes)..."
           for i in $(seq 1 40); do
             sleep 30
+
             STATUS=$(curl -s \
               "https://trialcat.fly.dev/admin/etl/status" \
               -H "X-Admin-Secret: ${{ secrets.TRIALCAT_ADMIN_SECRET }}" \
-              --max-time 10)
+              --max-time 10 2>/dev/null || echo '{"running":true}')
 
-            RUNNING=$(echo "${STATUS}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('running', True))" 2>/dev/null)
+            RUNNING=$(echo "${STATUS}" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print(d.get('running', True))
+except:
+    print('True')
+" 2>/dev/null)
 
             if [ "${RUNNING}" = "False" ]; then
-              echo "ETL completed:"
-              echo "${STATUS}" | python3 -m json.tool
-              LOADED=$(echo "${STATUS}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total_loaded', 0))")
-              FAILED=$(echo "${STATUS}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total_failed', 0))")
-              echo "::notice::Loaded ${LOADED} trials, ${FAILED} failures"
+              echo "========================================="
+              echo "ETL COMPLETED"
+              echo "========================================="
+              echo "${STATUS}" | python3 -m json.tool 2>/dev/null || echo "${STATUS}"
+
+              # Extract stats
+              LOADED=$(echo "${STATUS}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total_loaded', 0))" 2>/dev/null || echo "?")
+              FAILED=$(echo "${STATUS}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total_failed', 0))" 2>/dev/null || echo "?")
+              ERROR=$(echo "${STATUS}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('error', '') or '')" 2>/dev/null || echo "")
+
+              echo "::notice::Nightly refresh complete: ${LOADED} trials loaded, ${FAILED} failures"
+
+              # Fail the workflow if there was an error or high failure rate
+              if [ -n "${ERROR}" ] && [ "${ERROR}" != "None" ] && [ "${ERROR}" != "" ]; then
+                echo "::error::ETL reported error: ${ERROR}"
+                exit 1
+              fi
+
+              if [ "${FAILED}" != "?" ] && [ "${FAILED}" != "0" ]; then
+                echo "::warning::${FAILED} trials failed to load"
+              fi
+
               exit 0
             fi
 
             LOADED=$(echo "${STATUS}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total_loaded', 0))" 2>/dev/null || echo "?")
-            echo "Still running... ${LOADED} trials loaded so far (check ${i}/40)"
+            BATCHES=$(echo "${STATUS}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('batches_loaded', 0))" 2>/dev/null || echo "?")
+            echo "Poll ${i}/40: running, ${LOADED} loaded in ${BATCHES} batches"
           done
 
-          echo "::warning::ETL still running after 20 minutes — check manually"
+          echo "::warning::ETL still running after 20 minutes — may complete on its own"
+          echo "Check manually: curl https://trialcat.fly.dev/admin/etl/status -H 'X-Admin-Secret: ...'"
