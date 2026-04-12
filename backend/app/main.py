@@ -158,20 +158,30 @@ async def version() -> dict:
     }
 
 
+# --- Admin endpoints ---
+# Background ETL state — simple dict because we're single-process SQLite anyway.
+# No need for Redis/Celery when your whole DB is a single file.
+_etl_status: dict = {"running": False, "last_run": None}
+
+
+def _verify_admin(secret: str) -> None:
+    """Check admin secret, raise 403 if invalid."""
+    if not settings.admin_secret or secret != settings.admin_secret:
+        raise HTTPException(status_code=403, detail="Invalid admin secret")
+
+
 @app.post("/admin/etl", tags=["admin"])
 async def admin_etl(
     limit: int = Query(default=500, ge=1, le=5000),
     condition: Optional[str] = Query(default=None),
     x_admin_secret: str = Header(..., alias="X-Admin-Secret"),
 ) -> dict:
-    """Trigger an ETL run remotely — no SSH required.
+    """Trigger a small ETL run (synchronous, up to 5000 trials).
 
-    Protected by the ADMIN_SECRET env var so only we can trigger it.
-    This is the pragmatic escape hatch: when SSH is fighting you on Windows,
-    just POST to this endpoint and the data loads itself.
+    For quick loads by therapeutic area. For bulk loading everything,
+    use /admin/etl/bulk instead.
     """
-    if not settings.admin_secret or x_admin_secret != settings.admin_secret:
-        raise HTTPException(status_code=403, detail="Invalid admin secret")
+    _verify_admin(x_admin_secret)
 
     import time
     from app.etl.loader import load_trials
@@ -206,4 +216,174 @@ async def admin_etl(
         "fetched": len(raw_trials),
         "stats": stats if isinstance(stats, dict) else {"loaded": stats},
         "fetch_seconds": round(fetch_duration, 1),
+    }
+
+
+def _run_bulk_etl(updated_since: Optional[str] = None, batch_size: int = 1000) -> None:
+    """Background worker for bulk ETL. Fetches ALL matching trials from CT.gov
+    in batches, committing each batch so progress is never lost.
+
+    This is the workhorse — it streams trials from CT.gov, loads them in
+    chunks of `batch_size`, and commits after each chunk. If it crashes
+    mid-run, you keep everything loaded so far.
+    """
+    import time
+    from app.etl.loader import load_trials
+    from app.services.ctgov_client import CTGovClient
+
+    _etl_status["running"] = True
+    _etl_status["started_at"] = datetime.now(timezone.utc).isoformat()
+    _etl_status["error"] = None
+    _etl_status["batches_loaded"] = 0
+    _etl_status["total_loaded"] = 0
+    _etl_status["total_failed"] = 0
+
+    try:
+        create_all_tables()
+        client = CTGovClient()
+
+        batch: list[dict] = []
+        total_fetched = 0
+
+        for trial in client.search_studies(updated_since=updated_since):
+            batch.append(trial)
+            total_fetched += 1
+
+            if len(batch) >= batch_size:
+                # Commit this batch — progress is never lost
+                session = SessionLocal()
+                try:
+                    stats = load_trials(session, batch)
+                    session.commit()
+                    loaded = stats.get("loaded", 0) if isinstance(stats, dict) else stats
+                    failed = stats.get("failed", 0) if isinstance(stats, dict) else 0
+                    _etl_status["total_loaded"] += loaded
+                    _etl_status["total_failed"] += failed
+                    _etl_status["batches_loaded"] += 1
+                    logger.info(
+                        "ETL batch %s: loaded=%s failed=%s total_fetched=%s",
+                        _etl_status["batches_loaded"], loaded, failed, total_fetched,
+                    )
+                except Exception as e:
+                    session.rollback()
+                    logger.exception("ETL batch failed: %s", e)
+                    _etl_status["total_failed"] += len(batch)
+                finally:
+                    session.close()
+                batch = []
+
+        # Final partial batch
+        if batch:
+            session = SessionLocal()
+            try:
+                stats = load_trials(session, batch)
+                session.commit()
+                loaded = stats.get("loaded", 0) if isinstance(stats, dict) else stats
+                failed = stats.get("failed", 0) if isinstance(stats, dict) else 0
+                _etl_status["total_loaded"] += loaded
+                _etl_status["total_failed"] += failed
+                _etl_status["batches_loaded"] += 1
+            except Exception as e:
+                session.rollback()
+                logger.exception("ETL final batch failed: %s", e)
+                _etl_status["total_failed"] += len(batch)
+            finally:
+                session.close()
+
+        _etl_status["total_fetched"] = total_fetched
+
+    except Exception as e:
+        logger.exception("ETL bulk run failed: %s", e)
+        _etl_status["error"] = str(e)
+    finally:
+        _etl_status["running"] = False
+        _etl_status["finished_at"] = datetime.now(timezone.utc).isoformat()
+        _etl_status["last_run"] = _etl_status["finished_at"]
+        logger.info(
+            "ETL bulk complete: loaded=%s failed=%s",
+            _etl_status.get("total_loaded"), _etl_status.get("total_failed"),
+        )
+
+
+@app.post("/admin/etl/bulk", tags=["admin"])
+async def admin_etl_bulk(
+    updated_since: Optional[str] = Query(
+        default=None,
+        description="Only fetch trials updated since this date (MM/DD/YYYY). "
+        "Omit to fetch everything.",
+    ),
+    x_admin_secret: str = Header(..., alias="X-Admin-Secret"),
+) -> dict:
+    """Kick off a bulk ETL run in a background thread.
+
+    Streams ALL matching trials from CT.gov and loads them in batches of 1000,
+    committing each batch. Check progress via GET /admin/etl/status.
+
+    For nightly refresh, pass updated_since with yesterday's date.
+    For full initial load, omit updated_since.
+    """
+    _verify_admin(x_admin_secret)
+
+    if _etl_status.get("running"):
+        return {
+            "status": "already_running",
+            "started_at": _etl_status.get("started_at"),
+            "batches_loaded": _etl_status.get("batches_loaded", 0),
+            "total_loaded": _etl_status.get("total_loaded", 0),
+        }
+
+    import threading
+    thread = threading.Thread(
+        target=_run_bulk_etl,
+        kwargs={"updated_since": updated_since},
+        daemon=True,
+    )
+    thread.start()
+
+    return {
+        "status": "started",
+        "updated_since": updated_since or "all time",
+        "message": "Bulk ETL running in background. Check /admin/etl/status for progress.",
+    }
+
+
+@app.get("/admin/etl/status", tags=["admin"])
+async def admin_etl_status(
+    x_admin_secret: str = Header(..., alias="X-Admin-Secret"),
+) -> dict:
+    """Check the status of a running or completed bulk ETL job."""
+    _verify_admin(x_admin_secret)
+    return _etl_status
+
+
+@app.post("/admin/etl/refresh", tags=["admin"])
+async def admin_etl_refresh(
+    days: int = Query(default=2, ge=1, le=30),
+    x_admin_secret: str = Header(..., alias="X-Admin-Secret"),
+) -> dict:
+    """Incremental refresh — fetch trials updated in the last N days.
+
+    This is what the nightly cron job calls. Default is 2 days to
+    catch anything that landed late in the previous day's window.
+    """
+    _verify_admin(x_admin_secret)
+
+    if _etl_status.get("running"):
+        return {"status": "already_running", "message": "Wait for current ETL to finish"}
+
+    from datetime import timedelta
+    since_date = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%m/%d/%Y")
+
+    import threading
+    thread = threading.Thread(
+        target=_run_bulk_etl,
+        kwargs={"updated_since": since_date},
+        daemon=True,
+    )
+    thread.start()
+
+    return {
+        "status": "started",
+        "updated_since": since_date,
+        "message": f"Refreshing trials updated in the last {days} days.",
     }

@@ -1,0 +1,74 @@
+# Nightly ETL refresh — pulls trials updated in the last 2 days from CT.gov.
+# Runs at 4:00 AM UTC (midnight ET) so fresh data is ready by morning.
+# Two-day window ensures we never miss a trial that posted late in the day.
+#
+# Cost: $0 (GitHub Actions free tier covers this easily — it's one curl call)
+# Requires: TRIALCAT_ADMIN_SECRET set in repo Settings → Secrets → Actions
+
+name: Nightly CT.gov Refresh
+
+on:
+  schedule:
+    # 4:00 AM UTC = midnight Eastern
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    # Manual trigger button in GitHub Actions UI — useful for testing
+    inputs:
+      days:
+        description: 'Days of history to refresh (default 2)'
+        required: false
+        default: '2'
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Trigger incremental refresh
+        run: |
+          DAYS="${{ github.event.inputs.days || '2' }}"
+          echo "Refreshing trials updated in the last ${DAYS} days..."
+
+          RESPONSE=$(curl -s -X POST \
+            "https://trialcat.fly.dev/admin/etl/refresh?days=${DAYS}" \
+            -H "X-Admin-Secret: ${{ secrets.TRIALCAT_ADMIN_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 30)
+
+          echo "Response: ${RESPONSE}"
+
+          # Check if it started successfully
+          if echo "${RESPONSE}" | grep -q '"status":"started"'; then
+            echo "ETL refresh started successfully"
+          else
+            echo "WARNING: Unexpected response"
+            exit 1
+          fi
+
+      - name: Wait for completion and report
+        run: |
+          # Poll status every 30s for up to 20 minutes
+          for i in $(seq 1 40); do
+            sleep 30
+            STATUS=$(curl -s \
+              "https://trialcat.fly.dev/admin/etl/status" \
+              -H "X-Admin-Secret: ${{ secrets.TRIALCAT_ADMIN_SECRET }}" \
+              --max-time 10)
+
+            RUNNING=$(echo "${STATUS}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('running', True))" 2>/dev/null)
+
+            if [ "${RUNNING}" = "False" ]; then
+              echo "ETL completed:"
+              echo "${STATUS}" | python3 -m json.tool
+              LOADED=$(echo "${STATUS}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total_loaded', 0))")
+              FAILED=$(echo "${STATUS}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total_failed', 0))")
+              echo "::notice::Loaded ${LOADED} trials, ${FAILED} failures"
+              exit 0
+            fi
+
+            LOADED=$(echo "${STATUS}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total_loaded', 0))" 2>/dev/null || echo "?")
+            echo "Still running... ${LOADED} trials loaded so far (check ${i}/40)"
+          done
+
+          echo "::warning::ETL still running after 20 minutes — check manually"

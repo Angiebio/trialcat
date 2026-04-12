@@ -89,6 +89,8 @@ class CTGovClient:
         study_type: Optional[str] = None,
         advanced_query: Optional[str] = None,
         fields: Optional[list[str]] = None,
+        updated_since: Optional[str] = None,
+        updated_before: Optional[str] = None,
     ) -> Iterator[dict]:
         """Search studies with pagination. Yields one study dict at a time.
 
@@ -117,6 +119,16 @@ class CTGovClient:
             params["query.lead"] = sponsor
         if advanced_query:
             params["query.term"] = advanced_query
+
+        # Date range filter — uses filter.advanced with AREA[LastUpdatePostDate]
+        # Dates must be MM/DD/YYYY format. This is how we do incremental refresh:
+        # fetch only trials that changed since the last ETL run.
+        if updated_since or updated_before:
+            since = updated_since or "MIN"
+            before = updated_before or "MAX"
+            params["filter.advanced"] = (
+                f"AREA[LastUpdatePostDate]RANGE[{since},{before}]"
+            )
 
         # Structured filters — CT.gov v2 uses `aggFilters` with comma-separated
         # `facet:value` pairs. Phase values are short: 0/1/2/3/4/na.
