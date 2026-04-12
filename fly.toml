@@ -1,0 +1,41 @@
+# trialcat Fly.io configuration
+# See https://fly.io/docs/reference/configuration/
+
+app = "trialcat"
+primary_region = "bos"  # Boston — close to Angie + Northeastern
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  APP_ENV = "production"
+  APP_PORT = "8000"
+  LOG_LEVEL = "INFO"
+  # Database path inside the persistent volume
+  DATABASE_URL = "sqlite:////data/trialcat.db"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[http_service.checks]]
+  grace_period = "10s"
+  interval = "30s"
+  method = "GET"
+  timeout = "5s"
+  path = "/health"
+
+# Persistent volume for SQLite — survives deploys and restarts.
+# Created via: fly volumes create trialcat_data --region bos --size 1
+[mounts]
+  source = "trialcat_data"
+  destination = "/data"

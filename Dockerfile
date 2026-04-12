@@ -34,8 +34,8 @@ COPY backend /app/backend
 COPY frontend /app/frontend
 COPY .env.example /app/.env.example
 
-# Create the data directory (SQLite will live here)
-RUN mkdir -p /app/data
+# Create the data directory as fallback (prod uses a mounted volume at /data)
+RUN mkdir -p /app/data /data
 
 # Expose the port the app runs on
 EXPOSE 8000
