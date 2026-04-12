@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     buttondown_api_key: str = Field(default="")
     buttondown_newsletter: str = Field(default="trialcat")
 
+    # --- Admin ---
+    admin_secret: str = Field(default="")  # Set via fly secrets; protects admin endpoints
+
     # --- Observability ---
     sentry_dsn: str = Field(default="")
 

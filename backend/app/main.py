@@ -13,8 +13,9 @@ structure is more valuable than cleverness applies here too.
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -23,6 +24,7 @@ from starlette.responses import HTMLResponse
 
 from app import __version__
 from app.config import settings
+from app.db import SessionLocal, create_all_tables
 from app.routes import (
     aggregate_router,
     filters_router,
@@ -52,6 +54,10 @@ async def lifespan(app: FastAPI):
         settings.app_env,
         __version__,
     )
+    # Ensure DB tables exist on startup — no more "no such table" crashes
+    # on a fresh deploy with an empty volume.
+    create_all_tables()
+    logger.info("Database tables verified")
     yield
     logger.info("trialcat shutting down")
 
@@ -149,4 +155,55 @@ async def version() -> dict:
         "app": settings.app_name,
         "version": __version__,
         "env": settings.app_env,
+    }
+
+
+@app.post("/admin/etl", tags=["admin"])
+async def admin_etl(
+    limit: int = Query(default=500, ge=1, le=5000),
+    condition: Optional[str] = Query(default=None),
+    x_admin_secret: str = Header(..., alias="X-Admin-Secret"),
+) -> dict:
+    """Trigger an ETL run remotely — no SSH required.
+
+    Protected by the ADMIN_SECRET env var so only we can trigger it.
+    This is the pragmatic escape hatch: when SSH is fighting you on Windows,
+    just POST to this endpoint and the data loads itself.
+    """
+    if not settings.admin_secret or x_admin_secret != settings.admin_secret:
+        raise HTTPException(status_code=403, detail="Invalid admin secret")
+
+    import time
+    from app.etl.loader import load_trials
+    from app.services.ctgov_client import CTGovClient
+
+    create_all_tables()
+    client = CTGovClient()
+
+    raw_trials: list[dict] = []
+    fetch_start = time.monotonic()
+    for trial in client.search_studies(condition=condition):
+        raw_trials.append(trial)
+        if len(raw_trials) >= limit:
+            break
+    fetch_duration = time.monotonic() - fetch_start
+
+    if not raw_trials:
+        return {"status": "empty", "message": "No trials matched the filter"}
+
+    session = SessionLocal()
+    try:
+        stats = load_trials(session, raw_trials)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"ETL load failed: {e}")
+    finally:
+        session.close()
+
+    return {
+        "status": "ok",
+        "fetched": len(raw_trials),
+        "stats": stats if isinstance(stats, dict) else {"loaded": stats},
+        "fetch_seconds": round(fetch_duration, 1),
     }
