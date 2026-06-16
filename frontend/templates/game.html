@@ -111,10 +111,11 @@
 
         <!-- The REAL board: the cat climbs the product-value track ($100k → $9B) -->
         <div class="value-board-wrap">
-            <div class="vb-label">📈 Your climb up the value board — <b id="vb-now">$100k</b></div>
+            <div class="vb-label">📈 The race up the value board — <span class="leg leg-you">🐈 you</span> vs <span class="leg leg-rival">🐕 the competition</span> · you're worth <b id="vb-now">$100k</b></div>
             <div class="value-board" id="value-board">
                 <img src="/static/img/board.svg" alt="The Strategy Game board — the product-value track from $100k to a $9B exit">
-                <span class="board-cat" id="board-cat">🐈</span>
+                <span class="board-rival" id="board-rival" title="The competition — racing you to approval">🐕</span>
+                <span class="board-cat" id="board-cat" title="You">🐈</span>
             </div>
         </div>
 
@@ -125,7 +126,8 @@
             <div class="track"><i id="readiness-bar" style="width:0%"></i></div>
         </div>
 
-        <div class="actions" id="actions"><!-- action buttons filled by JS --></div>
+        <div class="actions-label">🎴 Your move — play one card to spend a turn:</div>
+        <div class="actions" id="actions"><!-- action cards filled by JS --></div>
 
         <div class="log">
             <h3>Program log</h3>

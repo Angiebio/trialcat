@@ -80,6 +80,19 @@ SEED: dict[str, str] = {
     "capital": "In this game: your cash on hand (in $M). Actions cost it; raising it dilutes you. Hit zero and you're out of money, no matter how good the science.",
     "competitor": "In this game: a rival racing toward your indication. If their progress bar hits 100% they read out and file first, and you're second-to-market.",
     "turns": "In this game: your remaining runway. Each action spends a turn. Generous, but dithering still costs you while the competitor keeps moving.",
+    "get acquired": "When a bigger company buys your startup outright. In the game, taking the buyout cashes you out for a partial win — you exit before approval and hand the post-marketing headaches to someone with a bigger legal department.",
+    "acquired": "Bought outright by a larger company. In the game, accepting the offer cashes you out for a partial win — a clean exit before the finish line.",
+    "acquisition": "One company buying another. A common biotech exit: get acquired at a good valuation instead of going all the way to approval and launch yourself.",
+    "accelerated approval": "An FDA pathway that approves a drug early based on a surrogate endpoint likely to predict benefit — on the condition you run a confirmatory trial afterward to prove it. Faster to market, with homework due later.",
+    "surrogate endpoint": "A measurable stand-in (like tumor shrinkage or a lab value) used instead of the real outcome (like survival) because it shows up sooner. Only as good as its link to the thing that actually matters.",
+    "confirmatory trial": "The follow-up study you owe the FDA after an accelerated approval, to confirm the drug really delivers the clinical benefit its surrogate endpoint only promised.",
+    "real-world evidence": "Evidence about a product drawn from everyday clinical data (registries, claims, health records) rather than a controlled trial. Increasingly accepted by the FDA — slowly, and with caveats.",
+    "warning letter": "A formal, public FDA letter escalating unresolved violations (often an unanswered Form 483). It's posted on the FDA website with your name in bold; short-sellers find it before your CEO finishes coffee.",
+    "de novo": "An FDA pathway for a genuinely novel low-to-moderate-risk device that has no existing 'predicate' to claim equivalence to. For the brave and the actually-new.",
+    "qsub": "A pre-submission ('Q-Sub') meeting with the FDA's device center (CDRH) to get feedback before you formally file. Remarkably helpful — until they mention the testing you hadn't budgeted for.",
+    "boxed warning": "The FDA's most serious labeling warning (the 'black box'), flagging life-threatening risks. A new one is what sales teams gently call 'a positioning challenge.'",
+    "interim analysis": "A planned peek at trial data before it's finished, usually by an independent board, to decide whether to stop early for benefit, harm, or futility.",
+    "valuation": "What your company is judged to be worth. The game's whole board is a valuation ladder — drive it from $100k to a $9B exit.",
 }
 
 

@@ -264,9 +264,10 @@ function renderAll() { renderScenario(); renderHUD(); renderTension(); renderVal
 // player's current product value. (Horizontal climb — the snake-path is a later
 // refinement; for now the cat advances left→right as the valuation rises.)
 function renderValueBoard() {
-  const v = Math.max(0, Math.min(100, S.res.value));
-  const cat = $('board-cat'); if (cat) cat.style.left = (6 + v / 100 * 86) + '%';
-  const now = $('vb-now'); if (now) now.textContent = valueLabel(v);
+  const pos = (pct) => (6 + Math.max(0, Math.min(100, pct)) / 100 * 86) + '%';
+  const cat = $('board-cat'); if (cat) cat.style.left = pos(S.res.value);       // you, by product value
+  const rival = $('board-rival'); if (rival) rival.style.left = pos(S.competitor); // the competitor, by their progress
+  const now = $('vb-now'); if (now) now.textContent = valueLabel(Math.max(0, Math.min(100, S.res.value)));
 }
 
 function renderScenario() {
@@ -326,10 +327,10 @@ function renderActions() {
     const costs=Object.entries(a.delta).map(([k,v])=>fmt(k,v));
     if(a.ready)costs.push(`<span class="chip up">Readiness +${a.ready}</span>`);
     if(a.integrity)costs.push(`<span class="chip down">⚑ integrity flag</span>`);
-    return `<button class="action" data-act="${a.id}"><span class="a-name">${a.name}</span><span class="a-desc">${linkJargon(a.desc)}</span><span class="a-cost">${costs.join('')}</span></button>`;
+    return `<button class="action card-play" data-act="${a.id}"><span class="card-head"><span class="card-suit">♦</span>${a.name}</span><span class="card-body"><span class="a-desc">${linkJargon(a.desc)}</span><span class="a-cost">${costs.join('')}</span></span></button>`;
   }).join('');
   const advLabel = st.submission ? 'FILE WITH FDA →' : `Advance to ${S.stages[S.pos+1]?S.stages[S.pos+1].name:'approval'} →`;
-  html += `<button class="action advance" data-act="__advance" ${canAdvance?'':'disabled'}><span class="a-name">${advLabel}</span><span class="a-desc">${canAdvance?(st.submission?'Lock the package and face Dr. Vance.':'Bank value + evidence and move up the track.'):'Build more readiness first.'}</span></button>`;
+  html += `<button class="action advance card-play" data-act="__advance" ${canAdvance?'':'disabled'}><span class="card-head"><span class="card-suit">▶</span>${advLabel}</span><span class="card-body"><span class="a-desc">${canAdvance?(st.submission?'Lock the package and face Dr. Vance.':'Bank value + evidence and move up the track.'):'Build more readiness first.'}</span></span></button>`;
   $('actions').innerHTML = html;
   $('actions').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>onAction(b.dataset.act)));
 }
@@ -616,6 +617,9 @@ const GLOSSARY_TERMS = [
   'down round','Series B','boot-strap','bootstrap','expanded access','pivotal',
   'Form 483','510(k)','NDA/BLA','PDUFA','AdComm','RMAT','CMC','CRO','KOL','CRL',
   'IND','NDA','BLA','PMA','483','readiness','goodwill',
+  'Get Acquired','acquisition','acquired','accelerated approval','surrogate endpoint',
+  'confirmatory trial','real-world evidence','Warning Letter','De Novo','Q-Sub',
+  'boxed warning','interim analysis','valuation',
 ];
 const GLOSSARY_SORTED = [...GLOSSARY_TERMS].sort((a, b) => b.length - a.length);
 function _escRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }

@@ -41,11 +41,12 @@
          ================================================================ -->
     <a class="race-ribbon" href="/game" aria-label="Play Race to Approval — the clinical trials game">
         <div class="race-track" aria-hidden="true">
-            <span class="hurdle" style="left:14%">IND</span>
-            <span class="hurdle" style="left:30%">PH1</span>
-            <span class="hurdle" style="left:46%">PH2</span>
-            <span class="hurdle" style="left:62%">PH3</span>
-            <span class="hurdle" style="left:78%">NDA</span>
+            <!-- Two regulatory routes to the same finish: device (cyan, top) + drug (cream, bottom) -->
+            <span class="hurdle" style="left:14%"><b class="dev">IDE</b><b class="drg">IND</b></span>
+            <span class="hurdle" style="left:30%"><b class="dev">EFS</b><b class="drg">PH1</b></span>
+            <span class="hurdle" style="left:46%"><b class="dev">Feas.</b><b class="drg">PH2</b></span>
+            <span class="hurdle" style="left:62%"><b class="dev">Pivotal</b><b class="drg">PH3</b></span>
+            <span class="hurdle" style="left:78%"><b class="dev">510(k)</b><b class="drg">NDA</b></span>
             <span class="finish-flag">APPROVED</span>
             <!-- The runner. Galloping bob + scissoring legs + wagging tail +
                  a speed streak that lengthens on hover. Pure SVG, no assets. -->
@@ -54,15 +55,16 @@
                 <svg class="run-cat" viewBox="0 0 64 40" width="52" height="33" role="img" aria-label="running cat">
                     <!-- tail: wags as it runs -->
                     <path class="cat-tail" d="M10 20 C2 16 2 8 8 6" fill="none" stroke="#e8e52a" stroke-width="3.2" stroke-linecap="round"/>
-                    <!-- back legs (scissor opposite the front pair) -->
-                    <g class="legs-back" stroke="#4a0873" stroke-width="3" stroke-linecap="round">
+                    <!-- back legs (scissor opposite the front pair). Bright green +
+                         thicker so they actually read against the purple ribbon. -->
+                    <g class="legs-back" stroke="#3ddc2f" stroke-width="3.4" stroke-linecap="round">
                         <line x1="20" y1="26" x2="16" y2="36"/>
                         <line x1="26" y1="26" x2="30" y2="36"/>
                     </g>
                     <!-- body -->
                     <ellipse cx="32" cy="22" rx="18" ry="9" fill="#5bb545"/>
                     <!-- front legs -->
-                    <g class="legs-front" stroke="#4a0873" stroke-width="3" stroke-linecap="round">
+                    <g class="legs-front" stroke="#3ddc2f" stroke-width="3.4" stroke-linecap="round">
                         <line x1="42" y1="27" x2="46" y2="37"/>
                         <line x1="48" y1="27" x2="44" y2="37"/>
                     </g>
