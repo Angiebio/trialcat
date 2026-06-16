@@ -29,6 +29,13 @@ logger = logging.getLogger(__name__)
 # the right size of solution — no Redis to guard a few hundred calls a day.
 _ledger = {"date": None, "count": 0}
 
+# The budget circuit breaker. If OpenRouter ever rejects us for auth or credits,
+# we flip this for the rest of the UTC day and stop calling entirely — every
+# reviewer/glossary request just uses the scripted fallback. The whole point of
+# a tiny out-of-pocket project: running out of credits should be a soft landing,
+# not a pile of doomed requests. Out of budget != broken.
+_circuit = {"disabled_date": None}
+
 
 def _today() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -58,6 +65,8 @@ def chat(system_prompt: str, user_content: str, max_tokens: Optional[int] = None
     """
     if not settings.openrouter_api_key:
         return None
+    if _circuit["disabled_date"] == _today():
+        return None  # already hit an auth/credit wall today — straight to scripted, no wasted calls
     if not _budget_ok():
         logger.info("Game LLM daily cap (%s) reached — using scripted fallback", settings.game_llm_daily_call_cap)
         return None
@@ -86,6 +95,15 @@ def chat(system_prompt: str, user_content: str, max_tokens: Optional[int] = None
                 json={"model": model, "messages": messages, "max_tokens": cap, "temperature": 0.4},
                 timeout=20.0,
             )
+            if resp.status_code in (401, 402):
+                # Bad/expired key (401) or out of credits (402). Trying the
+                # fallback model won't help — it's the same account. Trip the
+                # breaker for the rest of the day and land softly on scripted.
+                _circuit["disabled_date"] = _today()
+                logger.warning(
+                    "OpenRouter %s (auth/credits) — game LLM OFF for today, using scripted fallback", resp.status_code
+                )
+                return None
             if resp.status_code >= 400:
                 logger.warning("OpenRouter %s returned %s: %s", model, resp.status_code, resp.text[:160])
                 continue
