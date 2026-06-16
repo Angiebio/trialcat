@@ -155,6 +155,76 @@ def _extract_device_class(description: Optional[str]) -> Optional[str]:
     return match.group(1).upper()
 
 
+# Ordered keyword → device product-category map. Order is priority: the FIRST
+# bucket whose keywords appear in the intervention name wins, so we list the
+# specific/strong signals before the generic ones (a "drug-eluting stent" should
+# read as Cardiovascular, not get swallowed by "Drug Delivery"). This is the
+# granularity below "DEVICE" that a regulatory professional reasons in — the
+# product family, which maps loosely to FDA review divisions and panels.
+# Heuristic and deliberately small; Phase 8 can swap it for the FDA product-code
+# (GMDN / FDA classification database) cross-reference.
+_DEVICE_CATEGORY_KEYWORDS: list[tuple[str, tuple[str, ...]]] = [
+    ("Software / Digital Health", (
+        "software", "algorithm", "mobile app", "smartphone", "digital health",
+        "artificial intelligence", "machine learning", "deep learning",
+        "decision support", "telehealth", "telemedicine", "virtual reality",
+        "mobile application", "app-based", "digital therapeutic", "chatbot",
+    )),
+    ("Cardiovascular", (
+        "stent", "catheter", "balloon", "pacemaker", "defibrillator", "icd",
+        "heart valve", "valve", "angioplast", "coronary", "vascular", "aortic",
+        "endovascular", "occluder", "cardiac lead", "left atrial", "tavr", "tavi",
+    )),
+    ("Neurostimulation", (
+        "stimulat", "electrode", "deep brain", "spinal cord stim", "neuromodulat",
+        "tms", "transcranial", "vagus", "cochlear", "neurostimul",
+    )),
+    ("Orthopedic / Implant", (
+        "implant", "prosthe", "orthop", "knee", "hip joint", "spinal", "screw",
+        "fixation", "bone graft", "arthroplast", "intervertebral",
+    )),
+    ("Imaging / Diagnostic Equipment", (
+        "mri", "ct scan", "ultrasound", "x-ray", "xray", "pet scan", "spect",
+        "scanner", "imaging", "endoscop", "colonoscop", "tomograph",
+    )),
+    ("Surgical / Ablation", (
+        "robot", "laser", "ablation", "surgical", "scalpel", "stapler",
+        "forceps", "cautery", "cryoablation", "radiofrequency",
+    )),
+    ("Drug Delivery / Infusion", (
+        "infusion pump", "injector", "infusion", "inhaler", "autoinjector",
+        "delivery system", "insulin pump", "syringe pump",
+    )),
+    ("Respiratory", (
+        "ventilat", "cpap", "oxygen", "nebuliz", "respirator",
+    )),
+    ("Monitoring / Sensor", (
+        "monitor", "sensor", "continuous glucose", "glucose meter", "holter",
+        "biosensor", "wearable",
+    )),
+    ("Wound Care", (
+        "dressing", "wound", "bandage", "negative pressure",
+    )),
+]
+
+
+def _classify_device_product(name: Optional[str], description: Optional[str]) -> Optional[str]:
+    """Bucket a DEVICE intervention into a coarse product category by name.
+
+    We search the name first (high signal, low noise) then fall back to the
+    description. Returns 'Other Device' when it's clearly a device but matches
+    no bucket, so the drill-down never silently drops devices on the floor —
+    "unclassified" is itself an honest, filterable answer.
+    """
+    haystack = " ".join(p for p in (name, description) if p).lower()
+    if not haystack:
+        return None
+    for category, keywords in _DEVICE_CATEGORY_KEYWORDS:
+        if any(kw in haystack for kw in keywords):
+            return category
+    return "Other Device"
+
+
 def _derive_therapeutic_area(
     meshes: list[dict],
     ancestors: list[dict],
@@ -293,13 +363,17 @@ def parse_trial(raw: dict) -> tuple[Trial, list[Location], list[Intervention], l
     interventions: list[Intervention] = []
     for iv in arms_mod.get("interventions") or []:
         desc = iv.get("description")
+        iv_type = iv.get("type")
+        iv_name = iv.get("name")
+        is_device = iv_type == "DEVICE"
         interventions.append(
             Intervention(
                 trial_nct_id=nct_id,
-                type=iv.get("type"),
-                name=iv.get("name"),
+                type=iv_type,
+                name=iv_name,
                 description=desc,
-                device_class_hint=_extract_device_class(desc) if iv.get("type") == "DEVICE" else None,
+                device_class_hint=_extract_device_class(desc) if is_device else None,
+                product_category=_classify_device_product(iv_name, desc) if is_device else None,
             )
         )
 

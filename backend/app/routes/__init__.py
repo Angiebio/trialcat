@@ -13,12 +13,14 @@ middleware (auth, rate limiting) selectively later.
 
 from app.routes.api_aggregate import router as aggregate_router
 from app.routes.api_filters import router as filters_router
+from app.routes.api_game import router as game_router
 from app.routes.api_stats import router as stats_router
 from app.routes.api_trials import router as trials_router
 
 __all__ = [
     "aggregate_router",
     "filters_router",
+    "game_router",
     "stats_router",
     "trials_router",
 ]

@@ -96,6 +96,8 @@ function buildFilterParams() {
     const phase = document.getElementById('filter-phase').value;
     const status = document.getElementById('filter-status').value;
     const intervention = document.getElementById('filter-intervention').value;
+    const productCategory = document.getElementById('filter-product-category').value;
+    const deviceClass = document.getElementById('filter-device-class').value;
     const startDate = document.getElementById('filter-start').value;
     const endDate = document.getElementById('filter-end').value;
 
@@ -103,6 +105,10 @@ function buildFilterParams() {
     if (phase) params.set('phase', phase);
     if (status) params.set('status', status);
     if (intervention) params.set('intervention_type', intervention);
+    // Drill-downs only matter when an intervention type is chosen; they're
+    // wiped + hidden otherwise, so a stale value can't leak into the query.
+    if (productCategory) params.set('product_category', productCategory);
+    if (deviceClass) params.set('device_class', deviceClass);
     if (startDate) params.set('start_date', startDate);
     if (endDate) params.set('end_date', endDate);
 
@@ -113,16 +119,66 @@ function buildFilterParams() {
 // FILTERS
 // =============================================================================
 
+// Stash the /api/filters payload so the dependent drill-downs can rebuild
+// their options on the fly when the intervention type changes.
+let filterData = null;
+
 async function loadFilters() {
     try {
         const data = await fetchJSON('/api/filters');
+        filterData = data;
         populateSelect('filter-area', data.therapeutic_areas);
         populateSelect('filter-phase', data.phases);
         populateSelect('filter-status', data.statuses);
         populateSelect('filter-intervention', data.intervention_types);
+        populateSelect('filter-device-class', (data.device_classes || []).map(c => ({
+            value: c, label: `Class ${c}`,
+        })));
+        // Wire the dependent drill-down: when intervention type changes, show
+        // the right finer cut (device family / drug class) and the device class.
+        document.getElementById('filter-intervention')
+            .addEventListener('change', updateDrilldowns);
     } catch (e) {
         console.error('[trialcat] Failed to load filters:', e);
     }
+}
+
+/**
+ * Show/hide + repopulate the product-category and device-class drill-downs
+ * based on the selected intervention type. A device has both a product family
+ * AND an FDA class; a drug has a pharmacologic class; everything else has
+ * neither. Switching type always clears the stale drill-down values so they
+ * can't silently survive into the next query.
+ */
+function updateDrilldowns() {
+    const itype = document.getElementById('filter-intervention').value;
+    const pcGroup = document.getElementById('group-product-category');
+    const pcSelect = document.getElementById('filter-product-category');
+    const pcLabel = document.getElementById('label-product-category');
+    const dcGroup = document.getElementById('group-device-class');
+    const dcSelect = document.getElementById('filter-device-class');
+
+    // Always reset the dependent values when the parent changes.
+    pcSelect.value = '';
+    dcSelect.value = '';
+
+    const byType = (filterData && filterData.product_categories_by_type) || {};
+    const cats = byType[itype] || [];
+
+    if (cats.length) {
+        // Label adapts to the domain: devices have "families", drugs have "classes".
+        pcLabel.textContent = itype === 'DEVICE' ? 'Device category'
+            : itype === 'DRUG' ? 'Drug class'
+            : 'Product category';
+        populateSelect('filter-product-category', cats);
+        pcGroup.style.display = '';
+    } else {
+        pcGroup.style.display = 'none';
+    }
+
+    // FDA device class is device-only.
+    dcGroup.style.display = (itype === 'DEVICE' && (filterData?.device_classes || []).length)
+        ? '' : 'none';
 }
 
 function populateSelect(elementId, values) {
@@ -130,8 +186,15 @@ function populateSelect(elementId, values) {
     while (select.options.length > 1) select.remove(1);
     for (const v of values) {
         const opt = document.createElement('option');
-        opt.value = v;
-        opt.textContent = v;
+        // Accept either bare strings or {value, label} objects so we can show
+        // a friendlier label (e.g. "Class II") while filtering on the raw value.
+        if (v && typeof v === 'object') {
+            opt.value = v.value;
+            opt.textContent = v.label;
+        } else {
+            opt.value = v;
+            opt.textContent = v;
+        }
         select.appendChild(opt);
     }
 }
@@ -141,6 +204,9 @@ function resetFilters() {
     document.getElementById('filter-phase').value = '';
     document.getElementById('filter-status').value = '';
     document.getElementById('filter-intervention').value = '';
+    document.getElementById('filter-product-category').value = '';
+    document.getElementById('filter-device-class').value = '';
+    updateDrilldowns();  // collapse the dependent groups back to hidden
     document.getElementById('filter-start').value = '';
     document.getElementById('filter-end').value = '';
     if (viewMode === 'us_states') {

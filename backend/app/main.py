@@ -28,6 +28,7 @@ from app.db import SessionLocal, create_all_tables
 from app.routes import (
     aggregate_router,
     filters_router,
+    game_router,
     stats_router,
     trials_router,
 )
@@ -100,6 +101,7 @@ app.include_router(filters_router)
 app.include_router(aggregate_router)
 app.include_router(stats_router)
 app.include_router(trials_router)
+app.include_router(game_router)
 
 
 # --- Routes ---
@@ -123,6 +125,36 @@ async def index(request: Request) -> HTMLResponse:
 async def terms(request: Request) -> HTMLResponse:
     """Terms of use and disclaimer page."""
     return templates.TemplateResponse(request=request, name="terms.html")
+
+
+@app.get("/about", response_class=HTMLResponse, tags=["pages"])
+async def about(request: Request) -> HTMLResponse:
+    """About, data provenance, and how-to-cite page (the scholarly front door)."""
+    return templates.TemplateResponse(request=request, name="about.html")
+
+
+@app.get("/game/rules", response_class=HTMLResponse, tags=["pages"])
+async def game_rules(request: Request) -> HTMLResponse:
+    """How to play + game terms / leaderboard data practice."""
+    return templates.TemplateResponse(request=request, name="game_rules.html")
+
+
+@app.get("/game", response_class=HTMLResponse, tags=["pages"])
+async def game(request: Request) -> HTMLResponse:
+    """'Race to Approval' — the satirical clinical-trials sim (v2).
+
+    The map taught what trials look like in aggregate; the game lets you feel
+    what it's like to push one through. Same data, two ways of knowing it.
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="game.html",
+        context={
+            "app_name": settings.app_name,
+            "version": __version__,
+            "env": settings.app_env,
+        },
+    )
 
 
 @app.get("/health", tags=["system"])

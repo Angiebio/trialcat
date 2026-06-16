@@ -52,6 +52,21 @@ class Intervention(Base):
         doc="Heuristic: 'I', 'II', 'III' parsed from description. None if not a device or not detected.",
     )
 
+    # --- Heuristic product category for the DEVICE drill-down ---
+    # CT.gov gives us no sub-classification of devices, and the FDA class hint
+    # above is too sparse to be useful (most descriptions never say "Class II").
+    # So we classify by the only signal we reliably have: the intervention name.
+    # A "catheter" is a catheter whether or not anyone wrote down its class.
+    # This is the populated, human-meaningful "product type" granularity below
+    # DEVICE — the thing a regulatory professional actually wants to slice by.
+    # Heuristic, not authoritative; None for non-devices or unrecognized names.
+    product_category: Mapped[Optional[str]] = mapped_column(
+        String(48),
+        nullable=True,
+        index=True,
+        doc="Heuristic device product category (Cardiovascular, Imaging, Software/Digital Health, etc.). None if not a device or unrecognized.",
+    )
+
     # --- Relationships ---
     trial: Mapped["Trial"] = relationship(back_populates="interventions")
 

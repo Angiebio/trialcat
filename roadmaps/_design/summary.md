@@ -1,0 +1,1 @@
+Design TrialCat v2: the regulatory-affairs board game reborn as a satirical web sim, plus roadmap + search/data specs

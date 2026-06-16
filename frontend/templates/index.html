@@ -34,6 +34,54 @@
     </header>
 
     <!-- ================================================================
+         RACE RIBBON — the doorway to the game. A cat gallops a regulatory
+         track (IND → phases → submission → APPROVED), hurdling the milestones
+         that eat real programs alive. The whole strip is one big click target.
+         "Body waiting on a heartbeat" — this ribbon is the pulse made visible.
+         ================================================================ -->
+    <a class="race-ribbon" href="/game" aria-label="Play Race to Approval — the clinical trials game">
+        <div class="race-track" aria-hidden="true">
+            <span class="hurdle" style="left:14%">IND</span>
+            <span class="hurdle" style="left:30%">PH1</span>
+            <span class="hurdle" style="left:46%">PH2</span>
+            <span class="hurdle" style="left:62%">PH3</span>
+            <span class="hurdle" style="left:78%">NDA</span>
+            <span class="finish-flag">APPROVED</span>
+            <!-- The runner. Galloping bob + scissoring legs + wagging tail +
+                 a speed streak that lengthens on hover. Pure SVG, no assets. -->
+            <span class="runner">
+                <span class="streak"></span>
+                <svg class="run-cat" viewBox="0 0 64 40" width="52" height="33" role="img" aria-label="running cat">
+                    <!-- tail: wags as it runs -->
+                    <path class="cat-tail" d="M10 20 C2 16 2 8 8 6" fill="none" stroke="#e8e52a" stroke-width="3.2" stroke-linecap="round"/>
+                    <!-- back legs (scissor opposite the front pair) -->
+                    <g class="legs-back" stroke="#4a0873" stroke-width="3" stroke-linecap="round">
+                        <line x1="20" y1="26" x2="16" y2="36"/>
+                        <line x1="26" y1="26" x2="30" y2="36"/>
+                    </g>
+                    <!-- body -->
+                    <ellipse cx="32" cy="22" rx="18" ry="9" fill="#5bb545"/>
+                    <!-- front legs -->
+                    <g class="legs-front" stroke="#4a0873" stroke-width="3" stroke-linecap="round">
+                        <line x1="42" y1="27" x2="46" y2="37"/>
+                        <line x1="48" y1="27" x2="44" y2="37"/>
+                    </g>
+                    <!-- head + ears + eye -->
+                    <circle cx="50" cy="15" r="8" fill="#5bb545"/>
+                    <path d="M44 9 L45 2 L51 7 Z" fill="#5bb545"/>
+                    <path d="M54 8 L57 2 L58 9 Z" fill="#5bb545"/>
+                    <circle class="cat-eye" cx="53" cy="14" r="1.6" fill="#4a0873"/>
+                    <path d="M58 16 l5 -1 M58 17 l5 1" stroke="#4a0873" stroke-width="0.9" stroke-linecap="round"/>
+                </svg>
+            </span>
+        </div>
+        <div class="race-cta">
+            <span class="race-title">Can you run your clinical trials fast&nbsp;enough?</span>
+            <span class="race-go">PLAY&nbsp;▶</span>
+        </div>
+    </a>
+
+    <!-- ================================================================
          MAIN LAYOUT — sidebar filters + map
          ================================================================ -->
     <div class="app-layout">
@@ -59,6 +107,20 @@
             <div class="filter-group">
                 <label for="filter-intervention">Intervention Type</label>
                 <select id="filter-intervention"><option value="">All types</option></select>
+            </div>
+
+            <!-- Product-type drill-down. Appears only once you pick an
+                 intervention type that HAS a finer cut (DEVICE → device family,
+                 DRUG → pharmacologic class). The label rewrites itself to match. -->
+            <div class="filter-group filter-dependent" id="group-product-category" style="display:none;">
+                <label for="filter-product-category" id="label-product-category">Product category</label>
+                <select id="filter-product-category"><option value="">All categories</option></select>
+            </div>
+
+            <!-- FDA device class (I/II/III) — the regulatory cut. DEVICE only. -->
+            <div class="filter-group filter-dependent" id="group-device-class" style="display:none;">
+                <label for="filter-device-class">FDA device class</label>
+                <select id="filter-device-class"><option value="">All classes</option></select>
             </div>
 
             <div class="filter-group">
@@ -92,6 +154,7 @@
     <footer class="app-footer">
         <p>
             For research and educational purposes only — not for clinical or regulatory decision-making.
+            <a href="/about">About&nbsp;&amp;&nbsp;How&nbsp;to&nbsp;Cite</a> ·
             <a href="/terms">Terms&nbsp;&amp;&nbsp;Disclaimer</a>.
         </p>
         <p>

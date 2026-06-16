@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Race to Approval — trialcat</title>
+    <meta name="description" content="A satirical clinical-trials sim from The Real Cat AI Labs. Shepherd a real FDA-regulated product from IND to approval before the money, the clock, or the competition kills it. Can you run your trials fast enough?">
+    <meta property="og:title" content="Race to Approval — the clinical trials game">
+    <meta property="og:description" content="Plague Inc., but you're the sponsor and the enemy is the regulatory timeline. Built on real ClinicalTrials.gov data.">
+    <meta property="og:type" content="website">
+    <link rel="stylesheet" href="/static/css/game.css">
+    <link rel="icon" href="/static/img/favicon.png" type="image/png">
+</head>
+<body>
+    <!-- ============================ HEADER ============================ -->
+    <header class="game-header">
+        <div class="brand"><span class="logo-dot"></span> trialcat<span style="color:var(--c-green-soft);font-weight:600;">/race</span></div>
+        <nav>
+            <button class="ghost-btn" id="nav-leaderboard">🏆 Leaderboard</button>
+            <a class="ghost-btn" href="/game/rules">How to play</a>
+            <a class="ghost-btn" href="/">← Back to the map</a>
+        </nav>
+    </header>
+
+    <!-- ============================ INTRO ============================ -->
+    <section class="screen active" id="screen-intro">
+        <div class="hero">
+            <div class="kicker">A Real Cat AI Labs Simulation</div>
+            <h1>Race to&nbsp;Approval</h1>
+            <p class="sub">
+                Plague Inc., except you're the sponsor and the contagion is your own clinical program.
+                Shepherd a <b>real</b> FDA-regulated product from first-in-human to approval before the
+                money, the clock, or the competition buries it. <b>Can you run your trials fast enough?</b>
+            </p>
+            <button class="cta-big" id="btn-begin">Enter the war room ▶</button>
+
+            <div class="how-row">
+                <div class="how-card">
+                    <h3>🎲 Real data, real stakes</h3>
+                    <p>Every game deals you an actual trial from ClinicalTrials.gov. A drug routes you through IND → phases → NDA/BLA. A device forks to 510(k) or PMA. The board knows the difference.</p>
+                </div>
+                <div class="how-card">
+                    <h3>🧪 Spend wisely</h3>
+                    <p>Capital, reputation, evidence, and time. Enroll fast and dirty, or slow and clean. Engage the FDA early, or roll the dice. Every choice burns a resource you'll miss later.</p>
+                </div>
+                <div class="how-card">
+                    <h3>🗂️ Face the reviewer</h3>
+                    <p>At submission, make your case to Dr. Eleanor Vance of the Division of Regulatory Reckoning. She has read everything. She is not impressed. Her highest praise is "this is adequate." Convince her anyway.</p>
+                </div>
+            </div>
+            <p class="credlinks">
+                The web rebirth of <em>The Strategy Game (for Regulatory Affairs)</em>, a finished board game by
+                Angela N. Johnson, PhD — SVP of Regulatory Affairs, 25+ years across FDA and EMA, the person who has
+                actually received these letters so you can simply pretend to. A
+                <a href="https://therealcat.ai" target="_blank" rel="noopener">TRCL 501(c)(3)</a> project, with support from Biotech Mentor LLC.
+                Built on the same ClinicalTrials.gov pipeline as the <a href="/">trialcat map</a>. For delight, not regulatory advice.
+            </p>
+        </div>
+    </section>
+
+    <!-- ============================ REGISTER ============================ -->
+    <section class="screen" id="screen-register">
+        <div class="panel">
+            <h2>Name your sponsor</h2>
+            <p class="panel-sub">
+                For the leaderboard. No password, no verification, no spam — your email is just a
+                handle so we can tell two Angies apart. We never show it publicly (you'll appear as
+                "First L."). This is a board game, not a clinical registry; we collect accordingly.
+            </p>
+            <div class="row2">
+                <div class="field">
+                    <label for="reg-first">First name</label>
+                    <input type="text" id="reg-first" maxlength="80" placeholder="Angie" autocomplete="given-name">
+                </div>
+                <div class="field">
+                    <label for="reg-last">Last name</label>
+                    <input type="text" id="reg-last" maxlength="80" placeholder="J." autocomplete="family-name">
+                </div>
+            </div>
+            <div class="field">
+                <label for="reg-email">Email</label>
+                <input type="email" id="reg-email" maxlength="254" placeholder="you@example.com" autocomplete="email">
+                <div class="hint">Leaderboard handle only. Never shown, never sold.</div>
+            </div>
+            <div class="err" id="reg-err"></div>
+            <button class="btn-primary" id="btn-register" style="width:100%;">Deal me a product →</button>
+        </div>
+    </section>
+
+    <!-- ============================ CHARACTER SELECT ============================ -->
+    <section class="screen" id="screen-characters">
+        <div class="hero" style="padding-bottom:8px;">
+            <div class="kicker">Choose your founder</div>
+            <h1 style="font-size:clamp(32px,6vw,60px);">Who's running this company?</h1>
+            <p class="sub">Six archetypes from the original board. Each one bends the odds. Pick the one whose delusion matches yours.</p>
+        </div>
+        <div class="char-grid" id="characters-grid"><!-- filled by JS --></div>
+    </section>
+
+    <!-- ============================ PLAY ============================ -->
+    <section class="screen" id="screen-play">
+        <div class="scenario-card" id="scenario-card"><!-- filled by JS --></div>
+
+        <div class="hud" id="hud"><!-- resource tiles filled by JS --></div>
+
+        <div class="tension">
+            <div class="lab"><span>🏁 Competitor progress</span><span id="tension-pct">0%</span></div>
+            <div class="track"><i id="tension-bar" style="width:0%"></i></div>
+        </div>
+
+        <div class="board" id="board"><!-- stage nodes filled by JS --></div>
+
+        <div class="readiness">
+            <div class="lab"><span id="readiness-label">Stage readiness</span><span><b id="readiness-now">0</b> / <span id="readiness-need">0</span></span></div>
+            <div class="track"><i id="readiness-bar" style="width:0%"></i></div>
+        </div>
+
+        <div class="actions" id="actions"><!-- action buttons filled by JS --></div>
+
+        <div class="log">
+            <h3>Program log</h3>
+            <div id="log-entries"></div>
+        </div>
+    </section>
+
+    <!-- ============================ OVERLAYS ============================ -->
+    <div class="overlay" id="overlay-event">
+        <div class="card-modal" id="event-card">
+            <div class="card-kind" id="event-kind">EVENT</div>
+            <h2 id="event-title"></h2>
+            <p class="card-flavor" id="event-flavor"></p>
+            <p class="card-effect" id="event-effect"></p>
+            <button class="btn-primary" id="event-ok" style="width:100%;">Deal with it</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay-review">
+        <div class="review-modal" id="review-box">
+            <h2>FDA Submission</h2>
+            <div class="reviewer" id="review-reviewer">Division of Regulatory Reckoning</div>
+            <div id="review-input-stage">
+                <p class="card-flavor">Make your case. In a sentence or three: why should this product be approved? (The reviewer reads for rigor, not enthusiasm.)</p>
+                <textarea id="review-text" placeholder="Our pivotal trial met its primary endpoint with statistical significance and a favorable benefit-risk profile..."></textarea>
+                <div class="btn-row"><button class="btn-primary" id="btn-submit-review">Submit to FDA →</button></div>
+            </div>
+            <div id="review-result-stage" style="display:none;">
+                <span class="review-badge" id="review-badge"></span>
+                <div class="review-letter" id="review-letter"></div>
+                <div class="review-verdict" id="review-verdict"></div>
+                <div class="btn-row"><button class="btn-primary" id="btn-review-continue">Continue</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Choice fork (buyout / hire CRO / fire CEO / endpoint) -->
+    <div class="overlay" id="overlay-choice">
+        <div class="card-modal swing" id="choice-box">
+            <div class="card-kind" style="color:var(--c-yellow);">⚖ A decision lands on your desk</div>
+            <h2 id="choice-title"></h2>
+            <p class="card-flavor" id="choice-flavor"></p>
+            <div class="btn-row" id="choice-options"><!-- option buttons by JS --></div>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay-end">
+        <div class="end-modal" id="end-box">
+            <h1 id="end-title"></h1>
+            <div class="end-title2" id="end-title2"></div>
+            <p class="end-sub" id="end-sub"></p>
+            <div class="score-big" id="end-score">0</div>
+            <div class="score-rank" id="end-rank"></div>
+            <table class="leaderboard" id="end-leaderboard"></table>
+            <div class="btn-row">
+                <button class="btn-primary" id="btn-play-again">Play again</button>
+                <a class="ghost-btn" href="/">Back to the map</a>
+            </div>
+            <p class="footnote">
+                <em>The Strategy Game (for Regulatory Affairs)</em> — a satire by <a href="https://therealcat.ai" target="_blank" rel="noopener">The Real Cat AI Labs</a>,
+                a 501(c)(3), with support from Biotech Mentor LLC, on real <a href="https://clinicaltrials.gov" target="_blank" rel="noopener">ClinicalTrials.gov</a> data.
+                Not regulatory, clinical, or investment advice. The FDA is, in real life, staffed by people far more reasonable than Dr. Vance. Mostly.
+            </p>
+        </div>
+    </div>
+
+    <script src="/static/js/game.js"></script>
+</body>
+</html>

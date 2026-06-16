@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About, Data &amp; How to Cite — trialcat</title>
+    <meta name="description" content="How trialcat works, where its ClinicalTrials.gov data comes from, and how to cite it (APA, IEEE, MLA, Chicago, BibTeX).">
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="icon" href="/static/img/favicon.png" type="image/png">
+    <style>
+        body { padding: 40px 24px 80px; max-width: 760px; margin: 0 auto; font-size: 15px; line-height: 1.7; }
+        h1 { font-size: 30px; color: var(--c-purple); margin-bottom: 6px; }
+        h2 { font-size: 21px; color: var(--c-purple); margin-top: 36px; margin-bottom: 8px; }
+        h3 { font-size: 15px; color: var(--c-purple-80); margin: 18px 0 4px; }
+        .updated { font-size: 13px; color: var(--c-purple-60); margin-bottom: 8px; }
+        .back { display: inline-block; margin-bottom: 20px; font-size: 14px; }
+        .cite-card {
+            background: var(--c-cream-deep); border: 1px solid var(--c-border);
+            border-left: 4px solid var(--c-green); border-radius: 8px;
+            padding: 14px 16px; margin: 10px 0; position: relative;
+        }
+        .cite-card pre {
+            margin: 0; white-space: pre-wrap; word-break: break-word;
+            font-family: var(--font-mono); font-size: 12.5px; color: var(--c-purple-80); line-height: 1.5;
+            padding-right: 64px;
+        }
+        .copy-btn {
+            position: absolute; top: 10px; right: 10px; cursor: pointer;
+            font-family: var(--font-body); font-size: 11px; font-weight: 700;
+            background: var(--c-purple); color: #fff; border: none; border-radius: 6px; padding: 4px 10px;
+            transition: background 0.15s;
+        }
+        .copy-btn:hover { background: var(--c-green); color: var(--c-purple); }
+        .copy-btn.copied { background: var(--c-green); color: var(--c-purple); }
+        .intro-cite {
+            background: var(--c-green-soft); border-radius: 8px; padding: 16px 20px; margin: 20px 0 8px;
+            font-weight: 500; color: var(--c-purple);
+        }
+        .pipeline { counter-reset: step; list-style: none; padding-left: 0; }
+        .pipeline li { position: relative; padding: 8px 0 8px 40px; border-bottom: 1px solid var(--c-border); }
+        .pipeline li::before {
+            counter-increment: step; content: counter(step);
+            position: absolute; left: 0; top: 8px; width: 26px; height: 26px;
+            background: var(--c-purple); color: #fff; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;
+        }
+        code { background: var(--c-cream-deep); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+        .pagenav { font-size: 13px; margin-top: 8px; }
+        .pagenav a { margin-right: 14px; }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Back to trialcat</a>
+
+    <h1>About, Data &amp; How to Cite</h1>
+    <p class="updated">Last updated: June 2026</p>
+    <div class="pagenav">
+        <a href="#cite">How to cite</a> <a href="#how">How it works</a> <a href="#data">The data pipeline</a>
+        <a href="#caveats">Caveats</a> <a href="/terms">Terms &amp; disclaimer</a> <a href="/game">Play the game</a>
+    </div>
+
+    <!-- ====================== CITATION (prominent, at top) ====================== -->
+    <h2 id="cite">How to cite trialcat</h2>
+    <p class="intro-cite">
+        Using trialcat in a paper, poster, grant, or report? Please cite it — and cite the underlying
+        ClinicalTrials.gov data too. Copy-paste blocks below. Replace the access date as needed.
+    </p>
+
+    <h3>APA (7th ed.)</h3>
+    <div class="cite-card">
+        <button class="copy-btn" data-copy>Copy</button>
+        <pre>The Real Cat AI Labs. (2026). trialcat: Clinical trial enrollment intelligence [Web application]. The Real Cat AI Labs. https://trialcat.ai</pre>
+    </div>
+
+    <h3>IEEE</h3>
+    <div class="cite-card">
+        <button class="copy-btn" data-copy>Copy</button>
+        <pre>The Real Cat AI Labs, "trialcat: Clinical trial enrollment intelligence." The Real Cat AI Labs, 2026. [Online]. Available: https://trialcat.ai</pre>
+    </div>
+
+    <h3>MLA (9th ed.)</h3>
+    <div class="cite-card">
+        <button class="copy-btn" data-copy>Copy</button>
+        <pre>The Real Cat AI Labs. "trialcat: Clinical Trial Enrollment Intelligence." The Real Cat AI Labs, 2026, trialcat.ai. Accessed 16 June 2026.</pre>
+    </div>
+
+    <h3>Chicago (author-date)</h3>
+    <div class="cite-card">
+        <button class="copy-btn" data-copy>Copy</button>
+        <pre>The Real Cat AI Labs. 2026. "trialcat: Clinical Trial Enrollment Intelligence." https://trialcat.ai.</pre>
+    </div>
+
+    <h3>BibTeX</h3>
+    <div class="cite-card">
+        <button class="copy-btn" data-copy>Copy</button>
+        {% raw %}<pre>@misc{trialcat2026,
+  title        = {trialcat: Clinical Trial Enrollment Intelligence},
+  author       = {{The Real Cat AI Labs}},
+  year         = {2026},
+  howpublished = {\url{https://trialcat.ai}},
+  note         = {Data from ClinicalTrials.gov (U.S. National Library of Medicine)}
+}</pre>{% endraw %}
+    </div>
+
+    <h3>Citing the underlying data (ClinicalTrials.gov)</h3>
+    <div class="cite-card">
+        <button class="copy-btn" data-copy>Copy</button>
+        <pre>U.S. National Library of Medicine. ClinicalTrials.gov. National Institutes of Health. https://clinicaltrials.gov (accessed 16 June 2026).</pre>
+    </div>
+
+    <!-- ====================== HOW IT WORKS ====================== -->
+    <h2 id="how">How trialcat works</h2>
+    <p>
+        trialcat turns the public ClinicalTrials.gov registry into an interactive map and a set of
+        enrollment-pattern statistics. You filter by geography, therapeutic area, phase, status,
+        intervention type (drug vs. device vs. biologic, and beyond), and — for devices and drugs —
+        a product-type drill-down. The map recolors live; click any country or U.S. state for a
+        stats popup you can export to CSV.
+    </p>
+
+    <h2 id="data">Where the data comes from (the pipeline)</h2>
+    <ol class="pipeline">
+        <li><strong>Source.</strong> Every record originates from <a href="https://clinicaltrials.gov" target="_blank" rel="noopener">ClinicalTrials.gov</a>
+            API v2, the U.S. National Library of Medicine / NIH registry of FDA-regulated studies. The data is public domain.</li>
+        <li><strong>Fetch &amp; parse.</strong> A backend ETL pulls studies, paginating through the API, and parses each into a normalized
+            schema (trial, locations, interventions, conditions, outcomes). Partial dates and missing fields are handled defensively.</li>
+        <li><strong>Derive.</strong> Therapeutic area is mapped from the trial's MeSH terms; an approximate per-month enrollment rate is
+            computed from start and primary-completion dates; intervention type comes straight from the registry.</li>
+        <li><strong>Enrich (FDA).</strong> Device interventions are best-effort matched to the openFDA device-classification database for an
+            FDA class (I/II/III) and review-panel category; drug interventions are matched to openFDA NDC / Drugs@FDA for a pharmacologic
+            class and Rx/OTC status. These are <em>ballpark, name-based</em> mappings, not verified per-product determinations.</li>
+        <li><strong>Refresh.</strong> A scheduled job pulls trials updated in the recent window so the database stays reasonably current.
+            trialcat does not guarantee real-time accuracy; sponsors update their own records on varying schedules.</li>
+    </ol>
+
+    <h2 id="caveats">What to trust, and what not to</h2>
+    <ul>
+        <li><strong>Enrollment rates are approximate</strong> (start → primary-completion proxy; overestimates duration for long endpoints).</li>
+        <li><strong>Therapeutic area is heuristic</strong> (MeSH-tree mapping; may differ from the sponsor's framing).</li>
+        <li><strong>FDA class / product category and drug class are advisory</strong> (heuristic openFDA name-matching; verify against the FDA 510(k)/PMA, Orange Book, or Drugs@FDA databases for anything that matters).</li>
+        <li><strong>Coverage is a subset, not the whole registry</strong> — and it grows over time. Numbers are landscape-level, not audit-grade.</li>
+    </ul>
+    <p>
+        In short: trialcat is for <strong>research, education, and landscape orientation</strong>. For decisions, go to the primary sources.
+        Full legal terms, including the Massachusetts governing-law and commercial-use disclaimer, are on the
+        <a href="/terms">Terms &amp; Disclaimer</a> page.
+    </p>
+
+    <hr style="margin-top: 44px; border: none; border-top: 1px solid var(--c-border);">
+    <p style="font-size: 12px; color: var(--c-purple-60); margin-top: 16px;">
+        trialcat is a project of <strong>The Real Cat AI Labs, Inc.</strong>, a Massachusetts 501(c)(3) nonprofit,
+        with support from Biotech Mentor LLC. Open-source (MIT). Data is public domain.
+    </p>
+
+    <script>
+        // Copy-to-clipboard for each citation block. Small, dependency-free.
+        document.querySelectorAll('.copy-btn[data-copy]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const pre = btn.parentElement.querySelector('pre');
+                navigator.clipboard.writeText(pre.innerText).then(() => {
+                    btn.textContent = 'Copied ✓'; btn.classList.add('copied');
+                    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1600);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

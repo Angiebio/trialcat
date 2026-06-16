@@ -76,7 +76,34 @@ def _needs_location_join(filters: FilterQuery) -> bool:
 
 
 def _needs_intervention_join(filters: FilterQuery) -> bool:
-    return bool(filters.intervention_type)
+    # Any of these facets pulls in the Interventions table: the broad type
+    # (DRUG/DEVICE) or either device drill-down beneath DEVICE (class, category).
+    return bool(
+        filters.intervention_type or filters.device_class or filters.product_category
+    )
+
+
+def _apply_intervention_join(stmt: Select, filters: FilterQuery) -> Select:
+    """Join Interventions once and apply the type + device-class conditions.
+
+    The single source of truth for the intervention drill-down, shared by
+    stats/trials/count and both choropleth aggregates. Two reasons it lives
+    here instead of being inlined per call site:
+      1. The DEVICE → class drill-down must behave identically everywhere.
+      2. When ONLY device_class is set we must NOT emit `type == None` — that
+         would silently match nothing. Each branch is applied independently.
+    Caller owns the no-double-join contract (this helper joins at most once).
+    """
+    if not _needs_intervention_join(filters):
+        return stmt
+    stmt = stmt.join(Intervention, Intervention.trial_nct_id == Trial.nct_id)
+    if filters.intervention_type:
+        stmt = stmt.where(Intervention.type == filters.intervention_type)
+    if filters.device_class:
+        stmt = stmt.where(Intervention.device_class_hint == filters.device_class)
+    if filters.product_category:
+        stmt = stmt.where(Intervention.product_category == filters.product_category)
+    return stmt
 
 
 def _apply_join_filters(stmt: Select, filters: FilterQuery) -> Select:
@@ -88,9 +115,7 @@ def _apply_join_filters(stmt: Select, filters: FilterQuery) -> Select:
         if filters.state_code:
             stmt = stmt.where(Location.state_code == filters.state_code)
 
-    if _needs_intervention_join(filters):
-        stmt = stmt.join(Intervention, Intervention.trial_nct_id == Trial.nct_id)
-        stmt = stmt.where(Intervention.type == filters.intervention_type)
+    stmt = _apply_intervention_join(stmt, filters)
 
     return stmt
 
@@ -120,10 +145,8 @@ def aggregate_by_country(session: Session, filters: FilterQuery) -> AggregateRes
         .order_by(func.count(distinct(Trial.nct_id)).desc())
     )
     row_stmt = apply_filters(row_stmt, filters)
-    # Don't double-join Location if intervention filter also needs joins
-    if _needs_intervention_join(filters):
-        row_stmt = row_stmt.join(Intervention, Intervention.trial_nct_id == Trial.nct_id)
-        row_stmt = row_stmt.where(Intervention.type == filters.intervention_type)
+    # Location is already joined above; add the intervention drill-down join.
+    row_stmt = _apply_intervention_join(row_stmt, filters)
 
     rows = [
         AggregateRow(
@@ -163,9 +186,8 @@ def aggregate_by_us_state(session: Session, filters: FilterQuery) -> AggregateRe
         .order_by(func.count(distinct(Trial.nct_id)).desc())
     )
     row_stmt = apply_filters(row_stmt, us_filters)
-    if _needs_intervention_join(us_filters):
-        row_stmt = row_stmt.join(Intervention, Intervention.trial_nct_id == Trial.nct_id)
-        row_stmt = row_stmt.where(Intervention.type == us_filters.intervention_type)
+    # Location is already joined above; add the intervention drill-down join.
+    row_stmt = _apply_intervention_join(row_stmt, us_filters)
 
     rows = [
         AggregateRow(
@@ -323,12 +345,29 @@ def get_filter_options(session: Session) -> FilterOptions:
         ).all()
         return [r[0] for r in rows if r[0]]
 
+    # Group product categories by intervention type so the UI can show only the
+    # relevant drill-down values for the selected type (device families when
+    # DEVICE is picked, drug/pharm classes when DRUG is picked). One small query.
+    pc_rows = session.execute(
+        select(Intervention.type, Intervention.product_category)
+        .where(Intervention.product_category.isnot(None))
+        .where(Intervention.type.isnot(None))
+        .distinct()
+        .order_by(Intervention.type, Intervention.product_category)
+    ).all()
+    by_type: dict[str, list[str]] = {}
+    for itype, pcat in pc_rows:
+        by_type.setdefault(itype, []).append(pcat)
+
     return FilterOptions(
         therapeutic_areas=_distinct_strs(Trial.therapeutic_area),
         phases=_distinct_strs(Trial.phase),
         statuses=_distinct_strs(Trial.overall_status),
         study_types=_distinct_strs(Trial.study_type),
         intervention_types=_distinct_strs(Intervention.type),
+        device_classes=_distinct_strs(Intervention.device_class_hint),
+        product_categories=_distinct_strs(Intervention.product_category),
+        product_categories_by_type=by_type,
         countries=_distinct_strs(Location.country_code),
     )
 

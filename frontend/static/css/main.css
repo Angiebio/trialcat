@@ -27,6 +27,7 @@
     /* --- Layout --- */
     --sidebar-width: 280px;
     --header-height: 56px;
+    --ribbon-height: 48px;
     --footer-height: 40px;
 }
 
@@ -113,7 +114,7 @@ a:hover { text-decoration-color: var(--c-orange); }
 
 .app-layout {
     display: flex;
-    height: calc(100vh - var(--header-height) - var(--footer-height));
+    height: calc(100vh - var(--header-height) - var(--ribbon-height) - var(--footer-height));
 }
 
 /* --- Sidebar --- */
@@ -446,9 +447,149 @@ a:hover { text-decoration-color: var(--c-orange); }
         border-bottom: 1px solid var(--c-border);
     }
     .map-container {
-        height: calc(100vh - var(--header-height) - var(--footer-height) - 200px);
+        height: calc(100vh - var(--header-height) - var(--ribbon-height) - var(--footer-height) - 200px);
     }
     .filter-group { display: inline-block; width: 48%; margin-right: 2%; }
     .btn-apply, .btn-reset { display: inline-block; width: 48%; }
     .sidebar-stats { display: none; }
+    .race-title { font-size: 12px; }
+    .hurdle { display: none; }
+}
+
+/* ==========================================================================
+   RACE RIBBON — the animated doorway to the game
+   A cat gallops a regulatory track. The strip is the heartbeat of v2: the
+   serious data tool, winking at you to come play. Epic energy, brand colors,
+   zero image assets (all SVG + keyframes, so it ships anywhere).
+   ========================================================================== */
+
+.race-ribbon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: var(--ribbon-height);
+    /* Deep-purple field with a green energy wash on the right (the finish). */
+    background:
+        linear-gradient(90deg, #3a0560 0%, #4a0873 55%, #5e109a 100%);
+    border-bottom: 2px solid var(--c-green);
+    overflow: hidden;
+    cursor: pointer;
+    text-decoration: none !important;
+    user-select: none;
+}
+.race-ribbon::before {
+    /* A faint yellow "energy" pulse sweeping across, urgency made ambient. */
+    content: "";
+    position: absolute; top: 0; bottom: 0; left: 0; width: 160px;
+    background: radial-gradient(closest-side, rgba(232,229,42,0.20), transparent 75%);
+    transform: translateX(-200px);
+    animation: ribbonSweep 6s linear infinite;
+    pointer-events: none;
+}
+
+.race-track {
+    position: relative;
+    flex: 1;
+    height: 100%;
+    min-width: 0;
+}
+/* The galloping groundline — dashes scroll left, selling forward speed. */
+.race-track::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 9px;
+    height: 2px;
+    background: repeating-linear-gradient(90deg,
+        rgba(199,227,177,0.85) 0 10px, transparent 10px 22px);
+    animation: groundScroll 0.6s linear infinite;
+}
+
+.hurdle {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    font-size: 9px; font-weight: 800; letter-spacing: 0.06em;
+    color: rgba(250,250,245,0.55);
+    border: 1px solid rgba(199,227,177,0.30);
+    border-radius: 3px;
+    padding: 1px 5px;
+    white-space: nowrap;
+}
+.finish-flag {
+    position: absolute;
+    right: 8px; top: 50%; transform: translateY(-50%);
+    font-size: 10px; font-weight: 900; letter-spacing: 0.08em;
+    color: var(--c-purple);
+    background: var(--c-green);
+    padding: 3px 8px; border-radius: 4px;
+    box-shadow: 0 0 14px rgba(91,181,69,0.6);
+    animation: finishPulse 1.8s ease-in-out infinite;
+}
+
+/* The runner — gallops in place; the scrolling ground carries the motion. */
+.runner {
+    position: absolute;
+    left: 8%; top: 50%;
+    transform: translateY(-52%);
+    display: flex; align-items: center;
+    transition: left 0.4s ease;
+}
+.streak {
+    position: absolute;
+    right: 100%; top: 50%; transform: translateY(-50%);
+    width: 26px; height: 3px; border-radius: 3px;
+    background: linear-gradient(90deg, transparent, rgba(232,229,42,0.85));
+    transition: width 0.3s ease;
+}
+.run-cat { animation: gallop 0.35s ease-in-out infinite; transform-origin: center; overflow: visible; }
+.run-cat .legs-front { transform-box: fill-box; transform-origin: 45px 27px; animation: scissorA 0.35s linear infinite; }
+.run-cat .legs-back  { transform-box: fill-box; transform-origin: 23px 26px; animation: scissorB 0.35s linear infinite; }
+.run-cat .cat-tail   { transform-box: fill-box; transform-origin: 10px 20px; animation: tailWag 0.5s ease-in-out infinite; }
+.run-cat .cat-eye    { animation: catBlink 3.4s infinite; }
+
+.race-cta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 18px 0 12px;
+    flex-shrink: 0;
+    z-index: 2;
+}
+.race-title {
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.35);
+}
+.race-go {
+    color: var(--c-purple);
+    background: var(--c-yellow);
+    font-size: 12px; font-weight: 900; letter-spacing: 0.05em;
+    padding: 5px 12px; border-radius: 999px;
+    white-space: nowrap;
+    box-shadow: 0 0 0 0 rgba(232,229,42,0.7);
+    animation: goPulse 1.6s ease-out infinite;
+}
+
+/* Hover: lean in. Cat lunges forward, streak stretches, finish glows harder. */
+.race-ribbon:hover .runner { left: 11%; }
+.race-ribbon:hover .streak { width: 46px; }
+.race-ribbon:hover .race-go { background: var(--c-green); color: var(--c-purple); }
+.race-ribbon:hover .race-title { text-decoration: underline; text-decoration-color: var(--c-yellow); }
+
+@keyframes gallop      { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-3px) rotate(2deg); } }
+@keyframes scissorA    { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(20deg); } }
+@keyframes scissorB    { 0%,100% { transform: rotate(20deg); }  50% { transform: rotate(-20deg); } }
+@keyframes tailWag     { 0%,100% { transform: rotate(-10deg); } 50% { transform: rotate(12deg); } }
+@keyframes catBlink    { 0%,95%,100% { opacity: 1; } 97% { opacity: 0; } }
+@keyframes groundScroll{ from { background-position-x: 0; } to { background-position-x: -22px; } }
+@keyframes finishPulse { 0%,100% { box-shadow: 0 0 10px rgba(91,181,69,0.5); } 50% { box-shadow: 0 0 20px rgba(91,181,69,0.9); } }
+@keyframes goPulse     { 0% { box-shadow: 0 0 0 0 rgba(232,229,42,0.7); } 70% { box-shadow: 0 0 0 10px rgba(232,229,42,0); } 100% { box-shadow: 0 0 0 0 rgba(232,229,42,0); } }
+@keyframes ribbonSweep { from { transform: translateX(-200px); } to { transform: translateX(110vw); } }
+
+/* Respect the humans who get motion-sick. Stillness is also a valid aesthetic. */
+@media (prefers-reduced-motion: reduce) {
+    .run-cat, .run-cat *, .race-track::after, .finish-flag, .race-go, .race-ribbon::before {
+        animation: none !important;
+    }
 }

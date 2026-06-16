@@ -39,6 +39,8 @@ def read_stats(
     status: Optional[str] = Query(default=None),
     study_type: Optional[str] = Query(default=None),
     intervention_type: Optional[str] = Query(default=None),
+    device_class: Optional[str] = Query(default=None),
+    product_category: Optional[str] = Query(default=None),
     start_date: Optional[date] = Query(default=None),
     end_date: Optional[date] = Query(default=None),
 ) -> StatsResponse:
@@ -51,6 +53,8 @@ def read_stats(
         status=status,
         study_type=study_type,
         intervention_type=intervention_type,
+        device_class=device_class,
+        product_category=product_category,
         start_date=start_date,
         end_date=end_date,
     )

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Play &amp; Terms — The Strategy Game (for Regulatory Affairs)</title>
+    <meta name="description" content="Rules, scoring, leaderboard data practice, and terms for Race to Approval — a satirical clinical-trials sim from The Real Cat AI Labs.">
+    <link rel="stylesheet" href="/static/css/game.css">
+    <link rel="icon" href="/static/img/favicon.png" type="image/png">
+    <style>
+        .doc { max-width: 760px; margin: 0 auto; padding: 16px 20px 80px; }
+        .doc h1 { font-size: clamp(30px, 6vw, 48px); font-weight: 900; margin: 8px 0 4px; letter-spacing: -0.02em;
+            background: linear-gradient(120deg,#fff,var(--c-green) 60%,var(--c-yellow)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .doc h2 { font-size: 22px; color: var(--c-green); margin-top: 32px; }
+        .doc h3 { font-size: 15px; color: var(--c-yellow); margin: 16px 0 4px; }
+        .doc p, .doc li { color: var(--ink); line-height: 1.65; }
+        .doc .dim { color: var(--ink-dim); }
+        .doc ul { padding-left: 20px; }
+        .doc .res-line { font-weight: 700; }
+        .doc a { color: var(--c-green); }
+        .doc .box { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 12px; padding: 16px 20px; margin: 16px 0; }
+    </style>
+</head>
+<body>
+    <header class="game-header">
+        <div class="brand"><span class="logo-dot"></span> trialcat<span style="color:var(--c-green-soft);font-weight:600;">/race</span></div>
+        <nav>
+            <a class="ghost-btn" href="/game">▶ Play</a>
+            <a class="ghost-btn" href="/">← Map</a>
+        </nav>
+    </header>
+
+    <div class="doc">
+        <div class="kicker" style="color:var(--c-yellow);font-weight:800;letter-spacing:0.2em;text-transform:uppercase;font-size:13px;">How this works</div>
+        <h1>The Strategy Game<br>(for Regulatory Affairs)</h1>
+        <p class="dim">A satirical clinical-trials-to-FDA-approval sim. Plague Inc., except you're the sponsor and the
+            contagion is your own program. The web rebirth of a finished board game by Angela N. Johnson, PhD.</p>
+
+        <h2>The goal</h2>
+        <p>Take a <strong>real product</strong> — dealt from the live ClinicalTrials.gov registry — from first-in-human to
+            FDA approval, driving your <strong>product value</strong> up the track ($100k → $9B) before the money runs out,
+            the endpoint fails, or a competitor beats you to the press release. <strong>Can you run your trials fast enough?</strong></p>
+
+        <h2>Your resources</h2>
+        <ul>
+            <li><span class="res-line">💰 Product value</span> — the valuation track. Climbs as you clear stages and land good news. Top of the track is the win.</li>
+            <li><span class="res-line">💵 Capital</span> — cash. Actions cost it; hit zero and you're <em>out of money</em> (the original board's lose condition).</li>
+            <li><span class="res-line">📊 Data</span> — clinical/CMC evidence. The reviewer weighs this heavily. Data &gt; narrative.</li>
+            <li><span class="res-line">🤝 Goodwill</span> — your standing with FDA, KOLs, and investors. Cushions bad news.</li>
+            <li><span class="res-line">⏳ Turns</span> — runway. Generous, but dithering has a cost.</li>
+            <li><span class="res-line">🏁 Competitor</span> — a rival creeping toward your indication. Reaches 100% and you're second-to-market.</li>
+        </ul>
+
+        <h2>Each turn</h2>
+        <p>Pick one action — <strong>Run it clean</strong> (slow, costly, great data), <strong>Enroll fast &amp; dirty</strong>
+            (quick readiness, an integrity flag Dr. Vance will find), <strong>Engage the FDA early</strong> (buys goodwill and slows
+            the competitor), or <strong>Raise capital</strong>. Build <em>readiness</em> to clear each stage gate, then <strong>Advance</strong>.
+            Most turns, a <strong>REG card</strong> lands — a clinical hold, a breakthrough designation, an advisory committee, a buyout
+            offer. Some make you choose.</p>
+
+        <h2>Your founder</h2>
+        <p>Pick one of six archetypes from the original board — Dr. Curzitall, D. Lay JD, Brian the grad student, O. Vrsink PhD,
+            Prof. Goetta Grant, Ms. N. Vested MBA — each bending the odds in its own (punny) way.</p>
+
+        <h2>The FDA reviewer</h2>
+        <p>At submission you make your case to <strong>Dr. Eleanor Vance</strong>, Division of Regulatory Reckoning. She weighs your
+            data heavily and your enthusiasm not at all, and returns one of four verdicts: APPROVED, APPROVABLE WITH DEFICIENCIES,
+            COMPLETE RESPONSE LETTER, or REFUSE TO FILE. (Optionally powered by a small, hard-capped language model; otherwise a
+            scripted Dr. Vance, equally unimpressed.)</p>
+
+        <h2>Winning, losing, and the leaderboard</h2>
+        <p>Reach approval to win; accept a buyout for a partial win ("exited before Series B"); run out of money, time, or get scooped
+            to lose. Your score rewards speed, leftover cash, honest data, and good regulatory citizenship. The
+            <strong>🏆 Hall of Sponsors</strong> ranks everyone — with titles from "Regulatory Unicorn" to "Never Raised Series B."</p>
+
+        <div class="box">
+            <h3>Leaderboard &amp; your data (MVP, and labeled as such)</h3>
+            <p class="dim" style="margin:4px 0 0;">To appear on the leaderboard we store your first name, last name, and email.
+                There is <strong>no account, no password, no verification</strong> — the email is only a contact handle and a way to
+                keep your best score from duplicating. We never display it (you appear as "First L."), never send it to the language
+                model, and never sell it. This is a board game, not a clinical registry, and we collect accordingly. Want your entry
+                removed? Email <a href="mailto:contact@therealcat.ai">contact@therealcat.ai</a>.</p>
+        </div>
+
+        <h2>The fine print</h2>
+        <p class="dim">This game is <strong>satire and education</strong>, not regulatory, clinical, or investment advice. It dramatizes
+            real FDA pathways for fun and literacy; it is not a model of any specific product, sponsor, or review. Real regulatory
+            decisions are made by real people far more reasonable than Dr. Vance. Provided "as is," for educational and research
+            purposes, with no warranty; see the tool's <a href="/terms">full Terms &amp; Disclaimer</a> (Massachusetts governing law).</p>
+
+        <p class="dim" style="font-size:12px;margin-top:32px;">
+            <em>The Strategy Game (for Regulatory Affairs)</em> — a project of The Real Cat AI Labs, Inc., a Massachusetts 501(c)(3),
+            with support from Biotech Mentor LLC. Built on real <a href="https://clinicaltrials.gov" target="_blank" rel="noopener">ClinicalTrials.gov</a> data.
+        </p>
+        <div style="text-align:center;margin-top:24px;"><a class="btn-primary" href="/game" style="text-decoration:none;">▶ Play now</a></div>
+    </div>
+</body>
+</html>

@@ -22,6 +22,7 @@ from app.models.location import Location
 from app.models.intervention import Intervention
 from app.models.condition import Condition, TrialCondition
 from app.models.outcome import Outcome
+from app.models.game import GameScore, Player
 
 __all__ = [
     "Base",
@@ -31,4 +32,6 @@ __all__ = [
     "Condition",
     "TrialCondition",
     "Outcome",
+    "Player",
+    "GameScore",
 ]

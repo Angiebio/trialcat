@@ -57,6 +57,34 @@ class FilterQuery(BaseModel):
         default=None,
         description="Intervention type: DRUG, DEVICE, BIOLOGICAL, BEHAVIORAL, etc.",
     )
+    # Product-type drill-down. For a regulatory professional, "device class"
+    # IS the meaningful granularity below "DEVICE" — it's the classification
+    # (I/II/III) that decides the whole pathway (510(k) vs PMA). Only sensible
+    # alongside intervention_type=DEVICE; harmless otherwise (no device rows
+    # carry a class hint by accident). The value is a heuristic hint parsed
+    # from the intervention description, not an authoritative FDA lookup yet.
+    device_class: Optional[str] = Field(
+        default=None,
+        description=(
+            "FDA device class drill-down: I, II, or III. Meaningful only when "
+            "intervention_type=DEVICE. Heuristic hint parsed from the "
+            "intervention description (Phase 8 will cross-ref the FDA 510(k)/PMA DB)."
+        ),
+    )
+    # The populated, day-to-day device drill-down. Where device_class is the
+    # regulatorily-pure cut (but sparse in CT.gov text), product_category is the
+    # one that's actually full of data and how people talk: "show me the
+    # cardiovascular devices", "show me the software/digital-health ones".
+    # Exact-match label (NOT uppercased — it's a human category string).
+    product_category: Optional[str] = Field(
+        default=None,
+        description=(
+            "Device product category drill-down, e.g. 'Cardiovascular', "
+            "'Software / Digital Health', 'Imaging / Diagnostic Equipment'. "
+            "Meaningful only when intervention_type=DEVICE. Heuristic from the "
+            "intervention name."
+        ),
+    )
 
     # --- Time range ---
     # Filters apply against Trial.start_date. A trial counts if its start_date
@@ -72,7 +100,10 @@ class FilterQuery(BaseModel):
     )
 
     # --- Normalize uppercase enum-like fields so callers don't have to ---
-    @field_validator("country_code", "state_code", "phase", "status", "study_type", "intervention_type")
+    @field_validator(
+        "country_code", "state_code", "phase", "status",
+        "study_type", "intervention_type", "device_class",
+    )
     @classmethod
     def _upper(cls, v: Optional[str]) -> Optional[str]:
         return v.upper() if v else v
@@ -91,4 +122,18 @@ class FilterOptions(BaseModel):
     statuses: list[str] = Field(description="Distinct overall_status values")
     study_types: list[str] = Field(description="Distinct study_type values")
     intervention_types: list[str] = Field(description="Distinct intervention type values")
+    device_classes: list[str] = Field(
+        description="Distinct device class hints present (I/II/III) — the regulatory DEVICE drill-down"
+    )
+    product_categories: list[str] = Field(
+        description="All distinct product categories present (flat list, all intervention types)"
+    )
+    product_categories_by_type: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description=(
+            "Map of intervention type → its distinct product categories. Powers "
+            "the dependent drill-down: device families when DEVICE is selected, "
+            "drug/pharmacologic classes when DRUG is selected."
+        ),
+    )
     countries: list[str] = Field(description="Distinct country_code values (from location rows)")

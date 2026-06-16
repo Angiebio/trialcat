@@ -47,10 +47,35 @@ class Settings(BaseSettings):
     )
     ctgov_fetch_page_size: int = Field(default=100, ge=1, le=1000)
 
+    # --- openFDA enrichment (Phase 8 v2) ---
+    # openFDA is the public FDA data API (devices, drugs, NDC, Drugs@FDA).
+    # No key is required, but the no-key tier is throttled hard: ~240 req/min
+    # and 1,000 req/day. A free key (https://open.fda.gov/apis/authentication/)
+    # lifts the daily ceiling to 120,000. We default the key to empty so the
+    # enrichment works out of the box; production should set OPENFDA_API_KEY.
+    openfda_api_key: str = Field(default="")
+    openfda_api_base: str = Field(default="https://api.fda.gov")
+
     # --- AI services (Phase 7+) ---
     openai_api_key: str = Field(default="")
     openai_model: str = Field(default="gpt-4o-mini")
     openai_embedding_model: str = Field(default="text-embedding-3-small")
+
+    # --- Game LLM: the FDA reviewer NPC (v2, OpenRouter, cheap + hard-capped) ---
+    # The reviewer is the ONLY LLM touch in the game and it is deliberately tiny:
+    # a short, in-character verdict. Cheap model, hard token cap, a per-day call
+    # ceiling so a public side-project can NEVER surprise us with a bill. Empty
+    # key → the scripted Dr. Vance fallback carries the whole feature, so the
+    # game is fully playable at $0. (Prices verified 2026-06-16: primary
+    # ~$0.10/$0.40 per M tok → ~1,960 games per $1.)
+    openrouter_api_key: str = Field(default="")
+    openrouter_base: str = Field(default="https://openrouter.ai/api/v1")
+    openrouter_model: str = Field(default="google/gemini-2.5-flash-lite")
+    openrouter_model_fallback: str = Field(default="mistralai/mistral-nemo")
+    openrouter_max_tokens: int = Field(default=180, ge=16, le=1024)
+    # Global per-process daily call ceiling. The hard stop that makes "cheap"
+    # a guarantee, not a hope. ~0.017 cents/call → 600 calls ≈ a dime a day.
+    game_llm_daily_call_cap: int = Field(default=600, ge=0)
 
     # --- Rate limiting (Phase 6) ---
     rate_limit_detail_per_day: int = Field(default=1, ge=0)
