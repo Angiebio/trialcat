@@ -381,7 +381,15 @@ a { color: var(--c-purple); text-decoration-color: var(--c-cyan); }
 /* ---- Action PLAYING CARDS: a colored header band over a cream body, so it's
    unmistakable these are cards you PLAY (vs the info tiles up top). ---- */
 .actions-label { font-family: var(--font-display); font-weight: 800; font-size: 14.5px; color: var(--c-purple); margin: 6px 0 10px; }
-.card-play { padding: 0 !important; overflow: hidden; display: flex; flex-direction: column; background: var(--c-cream) !important; }
+.card-play { padding: 0 !important; overflow: visible; display: flex; flex-direction: column; background: var(--c-cream) !important; position: relative; min-height: 176px; }
+/* Stacked-card look: two offset card backs peek out behind, so each action
+   reads as a DECK you draw from, not a flat panel. */
+.card-play::before, .card-play::after { content: ""; position: absolute; inset: 0; background: var(--c-cream-deep);
+    border: 3px solid var(--ink); border-radius: 6px; z-index: -1; }
+.card-play::before { transform: translate(4px, 5px); }
+.card-play::after { transform: translate(8px, 10px); }
+.card-play > .card-head, .card-play > .card-body { position: relative; z-index: 1; }
+.card-play:hover:not(:disabled) { transform: translateY(-4px); }
 .card-head { background: var(--c-purple); color: var(--c-cream); font-family: var(--font-display); font-weight: 800;
     font-size: 14px; padding: 8px 12px; border-bottom: 3px solid var(--ink); display: flex; align-items: center; gap: 7px; }
 .card-suit { color: var(--c-yellow); font-size: 12px; line-height: 1; }

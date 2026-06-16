@@ -56,18 +56,20 @@ const PATHWAYS = {
 };
 
 // Actions. delta in RAW content units (scaled in applyDelta). ready = readiness.
+// The four decks you can draw from. Names kept general so they read for BOTH
+// drug and device programs (no "Type B meeting" — that's a drug/biologic term).
 const ACTIONS = [
-  { id: 'clean', name: 'Run it clean', tag: 'study',
-    desc: 'By the protocol, by the book. Slow, costly, and the kind of data that survives review.',
+  { id: 'clean', name: 'Do R&D', tag: 'study', deck: '🔬 R&D',
+    desc: 'Lab and clinical work, by the book. Slow and costly, but it builds the kind of data that survives FDA review.',
     delta: { capital: -3, data: 2, reputation: 0 }, ready: 14 },
-  { id: 'fast', name: 'Enroll fast & dirty', tag: 'study',
-    desc: 'Pack the sites, ask questions later. Quick readiness, ugly data, an integrity flag Dr. Vance will find.',
+  { id: 'fast', name: 'Start enrolling patients', tag: 'study', deck: '🧪 Enroll',
+    desc: 'Open the sites and bring patients in. Faster progress than careful R&D, but rushing enrollment risks messier data.',
     delta: { capital: -2, data: 1, reputation: -1 }, ready: 20, integrity: 1 },
-  { id: 'fda', name: 'Engage the FDA early',
-    desc: 'Book a Type B meeting. Costs money and pride, buys goodwill and a clearer path.',
+  { id: 'fda', name: 'Meet with the FDA', tag: 'study', deck: '🏛️ FDA',
+    desc: 'Request a meeting with the agency to align on your plan. Costs money and time, buys goodwill and a clearer path.',
     delta: { capital: -1, data: 1, reputation: 2, value: 0, competitor: -1 }, ready: 8 },
-  { id: 'raise', name: 'Raise capital',
-    desc: 'Dilute the cap table, smile at the board, promise the moon. Refills the war chest.',
+  { id: 'raise', name: 'Raise funds', tag: 'money', deck: '💵 Funding',
+    desc: 'Sell equity, smile at the board, promise the moon. Refills the war chest.',
     delta: { capital: 5, reputation: -1 }, ready: 0, isRaise: true },
 ];
 
