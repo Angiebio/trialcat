@@ -177,6 +177,10 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-submit-review').addEventListener('click', submitReview);
   $('btn-review-continue').addEventListener('click', afterReview);
   $('btn-play-again').addEventListener('click', () => { $('overlay-end').classList.remove('active'); showScreen('screen-characters'); renderCharacters(); });
+  // Glossary popup closes on the button or a backdrop tap (it's a sidebar to
+  // learning, not a gate — never trap the player in a definition).
+  $('gloss-close').addEventListener('click', () => $('overlay-glossary').classList.remove('active'));
+  $('overlay-glossary').addEventListener('click', (e) => { if (e.target.id === 'overlay-glossary') $('overlay-glossary').classList.remove('active'); });
 });
 
 // ============================================================================
@@ -258,27 +262,34 @@ function renderAll() { renderScenario(); renderHUD(); renderTension(); renderBoa
 
 function renderScenario() {
   const s = S.seed;
+  const nctUrl = `https://clinicaltrials.gov/study/${encodeURIComponent(s.nct_id)}`;
   $('scenario-card').innerHTML = `
+    <div class="real-note">🔬 <strong>Your mission:</strong> get this <strong>real</strong> product through the FDA. It was dealt live from the
+      <a href="https://clinicaltrials.gov" target="_blank" rel="noopener">ClinicalTrials.gov</a> registry of actual studies —
+      tap <a class="nct" href="${nctUrl}" target="_blank" rel="noopener">${escapeHtml(s.nct_id)}</a> to read the genuine trial record.</div>
     <span class="tag path">${S.pathway.toUpperCase()} · ${S.pathway === 'device' ? '510(k)/PMA' : 'NDA/BLA'}</span>
     ${s.therapeutic_area ? `<span class="tag">${escapeHtml(s.therapeutic_area)}</span>` : ''}
     ${s.product_category ? `<span class="tag alt">${escapeHtml(s.product_category)}</span>` : ''}
     ${s.device_class ? `<span class="tag">Class ${escapeHtml(s.device_class)}</span>` : ''}
     ${s.phase && s.phase !== 'NA' ? `<span class="tag">${escapeHtml(s.phase)}</span>` : ''}
     <h2>${escapeHtml(s.title)}</h2>
-    <div class="meta">Playing as <strong>${escapeHtml(S.char.name)}</strong> · product: <strong>${escapeHtml(s.intervention_name || s.intervention_type || 'an investigational product')}</strong>
-      ${s.sponsor ? ` · orig. sponsor ${escapeHtml(s.sponsor)}` : ''}
-      · <a class="nct" href="https://clinicaltrials.gov/study/${encodeURIComponent(s.nct_id)}" target="_blank" rel="noopener">${escapeHtml(s.nct_id)}</a></div>`;
+    <div class="meta">Playing as <strong>${escapeHtml(S.char.name)}</strong> · product: <strong>${escapeHtml(s.intervention_name || s.intervention_type || 'an investigational product')}</strong>${s.sponsor ? ` · orig. sponsor ${escapeHtml(s.sponsor)}` : ''}</div>`;
 }
 
 function renderHUD() {
   const r = S.res;
-  const tile = (cls, ico, lab, val, pct) => `<div class="res ${cls}" id="res-${cls}"><div class="ico">${ico}</div><div class="lab">${lab}</div><div class="val">${val}</div><div class="bar"><i style="width:${Math.max(0,Math.min(100,pct))}%"></i></div></div>`;
+  // Each label is a "learn more" link — tap any stat to find out what it means.
+  const tile = (cls, ico, lab, val, pct, term) => `<div class="res ${cls}" id="res-${cls}">
+    <div class="ico">${ico}</div>
+    <div class="lab"><span class="jr" data-term="${term}">${lab}</span></div>
+    <div class="val">${val}</div>
+    <div class="bar"><i style="width:${Math.max(0,Math.min(100,pct))}%"></i></div></div>`;
   $('hud').innerHTML =
-    tile('value', '💰', 'Product value', valueLabel(r.value), r.value) +
-    tile('capital', '💵', 'Capital', '$' + Math.round(r.capital) + 'M', r.capital) +
-    tile('evidence', '📊', 'Data', Math.round(r.data), r.data) +
-    tile('reputation', '🤝', 'Goodwill', Math.round(r.reputation), r.reputation) +
-    tile('time', '⏳', 'Turns left', (S.maxTurns - S.turn + 1), (S.maxTurns - S.turn + 1) / S.maxTurns * 100);
+    tile('value', '💰', 'Product value', valueLabel(r.value), r.value, 'product value') +
+    tile('capital', '💵', 'Capital', '$' + Math.round(r.capital) + 'M', r.capital, 'capital') +
+    tile('evidence', '📊', 'Data', Math.round(r.data), r.data, 'data') +
+    tile('reputation', '🤝', 'Goodwill', Math.round(r.reputation), r.reputation, 'goodwill') +
+    tile('time', '⏳', 'Turns left', (S.maxTurns - S.turn + 1), (S.maxTurns - S.turn + 1) / S.maxTurns * 100, 'turns');
 }
 function renderTension() { const p=Math.max(0,Math.min(100,S.competitor)); $('tension-bar').style.width=p+'%'; $('tension-pct').textContent=Math.round(p)+'%'; }
 
@@ -300,12 +311,13 @@ function renderReadiness() {
 
 function renderActions() {
   const st=S.stages[S.pos], canAdvance = S.readiness >= (st.need||0);
-  const fmt=(k,v)=>{const sign=v>0?'up':'down';const label={capital:'$',data:'Data',reputation:'Goodwill',value:'Value',competitor:'Rival'}[k]||k;const raw=v*(SCALE[k]||1);const num=k==='capital'?`${v>0?'+':''}${Math.round(raw)}M`:`${v>0?'+':''}${Math.round(raw)}`;return `<span class="${sign}">${label} ${num}</span>`;};
+  // Each delta is its own chip so the cost line reads as tidy tokens, not a run-on.
+  const fmt=(k,v)=>{const sign=v>0?'up':'down';const label={capital:'$',data:'Data',reputation:'Goodwill',value:'Value',competitor:'Rival'}[k]||k;const raw=v*(SCALE[k]||1);const num=k==='capital'?`${v>0?'+':''}${Math.round(raw)}M`:`${v>0?'+':''}${Math.round(raw)}`;return `<span class="chip ${sign}">${label} ${num}</span>`;};
   let html = ACTIONS.map(a=>{
     const costs=Object.entries(a.delta).map(([k,v])=>fmt(k,v));
-    if(a.ready)costs.push(`<span class="up">Readiness +${a.ready}</span>`);
-    if(a.integrity)costs.push(`<span class="down">⚑ integrity</span>`);
-    return `<button class="action" data-act="${a.id}"><span class="a-name">${a.name}</span><span class="a-desc">${a.desc}</span><span class="a-cost">${costs.join(' · ')}</span></button>`;
+    if(a.ready)costs.push(`<span class="chip up">Readiness +${a.ready}</span>`);
+    if(a.integrity)costs.push(`<span class="chip down">⚑ integrity flag</span>`);
+    return `<button class="action" data-act="${a.id}"><span class="a-name">${a.name}</span><span class="a-desc">${linkJargon(a.desc)}</span><span class="a-cost">${costs.join('')}</span></button>`;
   }).join('');
   const advLabel = st.submission ? 'FILE WITH FDA →' : `Advance to ${S.stages[S.pos+1]?S.stages[S.pos+1].name:'approval'} →`;
   html += `<button class="action advance" data-act="__advance" ${canAdvance?'':'disabled'}><span class="a-name">${advLabel}</span><span class="a-desc">${canAdvance?(st.submission?'Lock the package and face Dr. Vance.':'Bank value + evidence and move up the track.'):'Build more readiness first.'}</span></button>`;
@@ -404,7 +416,7 @@ function showEvent(card, applied, note, skip) {
   const box=$('event-card'); box.className='card-modal '+card.k;
   $('event-kind').textContent = card.k==='good'?'✦ Good news':card.k==='bad'?'⚠ Bad news':'⚖ It could go either way';
   $('event-title').textContent = card.t;
-  $('event-flavor').textContent = card.f + (note||'');
+  $('event-flavor').innerHTML = linkJargon(card.f) + (note ? escapeHtml(note) : '');
   $('event-effect').innerHTML = effectSummary(applied, skip).replace(/^\(|\)$/g,'').split(', ').map(p=>`<span class="${/[-]/.test(p)||/lose/.test(p)?'down':'up'}">${p}</span>`).join(' &nbsp; ');
   $('overlay-event').classList.add('active');
   if (card.k==='bad') document.body.classList.add('shake');
@@ -416,7 +428,7 @@ let _choiceCard = null;
 function showChoice(card) {
   _choiceCard = card;
   $('choice-title').textContent = card.t;
-  $('choice-flavor').textContent = card.f;
+  $('choice-flavor').innerHTML = linkJargon(card.f);
   const optBtn = (key, o) => `<button class="btn-primary choice-opt" data-opt="${key}">${escapeHtml(o.label)}</button>`;
   $('choice-options').innerHTML = optBtn('a', card.sp.a) + optBtn('b', card.sp.b);
   $('choice-options').querySelectorAll('button').forEach(b => b.addEventListener('click', () => resolveChoice(b.dataset.opt)));
@@ -579,3 +591,77 @@ function showLeaderboardStandalone() {
 // ============================================================================
 function flashRes(cls){ const el=$('res-'+cls); if(!el)return; el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),500); }
 function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ============================================================================
+// GLOSSARY — the self-building "learn more" dictionary
+// Auto-links known jargon in flavor text; a tap fetches a plain-language
+// definition (seeded, or LLM-generated-and-saved on first encounter, so the
+// dictionary grows with play). Every door is openable.
+// ============================================================================
+const GLOSSARY_TERMS = [
+  'Type B meeting','Type A meeting','dilute the cap table','cap table',
+  'Complete Response Letter','refuse-to-file','refuse to file','primary endpoint',
+  'benefit-risk','breakthrough therapy','breakthrough','orphan drug',
+  'advisory committee','priority review voucher','substantial equivalence',
+  'post-market surveillance','post-market','integrity flag','product value',
+  'down round','Series B','boot-strap','bootstrap','expanded access','pivotal',
+  'Form 483','510(k)','NDA/BLA','PDUFA','AdComm','RMAT','CMC','CRO','KOL','CRL',
+  'IND','NDA','BLA','PMA','483','readiness','goodwill',
+];
+const GLOSSARY_SORTED = [...GLOSSARY_TERMS].sort((a, b) => b.length - a.length);
+function _escRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+/** Wrap the first occurrence of each known term in a clickable .jr span. Uses
+ *  null-delimited placeholders so a short term (NDA) can't match inside an
+ *  already-linked longer one (NDA/BLA). Returns safe HTML. */
+function linkJargon(text) {
+  if (!text) return '';
+  const ph = [];
+  let work = String(text);
+  for (const term of GLOSSARY_SORTED) {
+    const re = new RegExp('(?<![\\w/])(' + _escRe(term) + ')(?![\\w])', 'i');
+    const m = work.match(re);
+    if (m) { work = work.replace(re, ' ' + ph.length + ' '); ph.push({ term, hit: m[1] }); }
+  }
+  let html = escapeHtml(work);
+  ph.forEach((p, i) => {
+    html = html.replace(' ' + i + ' ',
+      `<span class="jr" data-term="${escapeHtml(p.term)}" title="What's this? Tap to learn">${escapeHtml(p.hit)}</span>`);
+  });
+  return html;
+}
+
+async function openGlossary(term) {
+  $('gloss-term').textContent = term;
+  $('gloss-def').textContent = 'Looking it up…';
+  $('gloss-actions').innerHTML = '';
+  $('overlay-glossary').classList.add('active');
+  try {
+    const r = await fetch('/api/game/glossary?term=' + encodeURIComponent(term));
+    renderGloss(await r.json());
+  } catch (e) { $('gloss-def').textContent = 'Could not load a definition right now.'; }
+}
+function renderGloss(d) {
+  $('gloss-term').textContent = d.term;
+  $('gloss-def').textContent = d.definition;
+  const badge = d.source === 'seed' ? '<span class="gloss-badge seed">curated</span>'
+    : d.source === 'llm' ? '<span class="gloss-badge llm">AI-written</span>'
+    : '<span class="gloss-badge pending">brand new</span>';
+  let html = badge;
+  if (d.regenerable) html += '<button class="ghost-btn" id="gloss-regen">↻ Improve this</button>';
+  $('gloss-actions').innerHTML = html;
+  if (d.regenerable) $('gloss-regen').onclick = () => regenGloss(d.term);
+}
+async function regenGloss(term) {
+  $('gloss-def').textContent = 'Asking the dictionary to do better…';
+  $('gloss-actions').innerHTML = '';
+  try {
+    const r = await fetch('/api/game/glossary/regenerate?term=' + encodeURIComponent(term), { method: 'POST' });
+    renderGloss(await r.json());
+  } catch (e) { $('gloss-def').textContent = 'Could not regenerate right now.'; }
+}
+// One delegated handler for every jargon link, anywhere on the page.
+document.addEventListener('click', (e) => {
+  const j = e.target.closest('.jr');
+  if (j && j.dataset.term) openGlossary(j.dataset.term);
+});

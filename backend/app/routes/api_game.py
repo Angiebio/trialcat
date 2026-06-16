@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import GameScore, Intervention, Player, Trial
 from app.schemas.game import (
+    GlossaryEntry,
     LeaderboardResponse,
     ReviewRequest,
     ReviewResponse,
@@ -32,6 +33,7 @@ from app.schemas.game import (
     SeedTrial,
 )
 from app.services.game_review import generate_review
+from app.services.glossary import get_definition, regenerate_definition
 
 router = APIRouter(prefix="/api/game", tags=["game"])
 
@@ -263,3 +265,37 @@ def review_submission(payload: ReviewRequest) -> ReviewResponse:
     because the model is off. No DB, no PII.
     """
     return generate_review(payload)
+
+
+# =============================================================================
+# GLOSSARY — the self-building "learn more" dictionary
+# =============================================================================
+
+
+def _entry(gt) -> GlossaryEntry:
+    return GlossaryEntry(
+        term=gt.term, definition=gt.definition, source=gt.source,
+        regenerable=(gt.source in ("llm", "pending")),
+    )
+
+
+@router.get(
+    "/glossary",
+    response_model=GlossaryEntry,
+    summary="Define a term (seed -> LLM-generate-and-cache -> grow the dictionary)",
+)
+def glossary(term: str = Query(..., min_length=1, max_length=120), db: Session = Depends(get_db)) -> GlossaryEntry:
+    """Return a plain-language definition. Seeds are instant; unseen terms are
+    generated once by the capped LLM and saved, so the glossary grows with play."""
+    return _entry(get_definition(db, term))
+
+
+@router.post(
+    "/glossary/regenerate",
+    response_model=GlossaryEntry,
+    summary="Generate a fresh definition; keep it only if the judge prefers it",
+)
+def glossary_regenerate(term: str = Query(..., min_length=1, max_length=120), db: Session = Depends(get_db)) -> GlossaryEntry:
+    """Produce a new LLM candidate; an LLM judge compares it to the stored one and
+    keeps whichever is clearer. The dictionary improves instead of drifting."""
+    return _entry(regenerate_definition(db, term))

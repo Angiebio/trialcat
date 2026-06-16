@@ -20,7 +20,7 @@ ethic, here too.
 
 from typing import Optional
 
-from sqlalchemy import ForeignKey, Index, Integer, String
+from sqlalchemy import ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -94,3 +94,28 @@ class GameScore(Base):
 
 # Composite index for the leaderboard's hot query: top scores, newest first.
 Index("ix_game_scores_leaderboard", GameScore.score.desc(), GameScore.fetched_at.desc())
+
+
+class GlossaryTerm(Base):
+    """One entry in the self-building glossary — the labor of teaching, persisted.
+
+    Seeded with hand-written definitions; grown by the LLM as players tap terms
+    the dictionary hasn't seen. Each curiosity leaves the next player a richer
+    glossary. `source` tells the UI whether to offer a regenerate (only 'llm'
+    entries can be improved); `quality_score` rises each time the judge keeps the
+    stored definition over a fresh candidate (a soft 'this one has earned trust').
+    """
+
+    __tablename__ = "glossary_terms"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # Normalized dedup key (lowercased, punctuation-stripped). The lookup handle.
+    term_key: Mapped[str] = mapped_column(String(120), nullable=False, unique=True, index=True)
+    term: Mapped[str] = mapped_column(String(120), nullable=False)
+    definition: Mapped[str] = mapped_column(Text, nullable=False)
+    # 'seed' (hand-written), 'llm' (generated, regenerable), 'pending' (no LLM yet).
+    source: Mapped[str] = mapped_column(String(16), nullable=False, default="seed")
+    quality_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    def __repr__(self) -> str:
+        return f"<GlossaryTerm {self.term_key} ({self.source})>"

@@ -148,8 +148,8 @@ a { color: var(--c-purple); text-decoration-color: var(--c-cyan); }
 .hero .sub { font-size: clamp(16px, 2.3vw, 20px); color: var(--c-purple-80); max-width: 660px;
     margin: 8px auto 24px; line-height: 1.55; }
 .hero .credlinks { font-size: 12.5px; color: var(--c-purple-80); margin-top: 28px; line-height: 1.6; }
-.hero-cover { max-width: 540px; width: 86%; margin: 10px auto 22px; display: block;
-    border: 4px solid var(--ink); border-radius: 6px; box-shadow: 8px 8px 0 0 var(--ink); transform: rotate(-1.2deg); }
+.hero-cover { max-width: 720px; width: 94%; margin: 12px auto 22px; display: block;
+    border: 4px solid var(--ink); border-radius: 6px; box-shadow: 8px 8px 0 0 var(--ink); transform: rotate(-1deg); }
 
 .how-row { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; margin: 36px 0 0; }
 .how-card { flex: 1 1 220px; max-width: 280px; padding: 18px; text-align: left; }
@@ -325,6 +325,41 @@ a { color: var(--c-purple); text-decoration-color: var(--c-cyan); }
 
 .footnote { text-align: center; font-size: 11px; color: var(--c-purple-80); margin-top: 40px; line-height: 1.5; }
 .footnote a { color: var(--c-purple); }
+
+/* ==========================================================================
+   GLOSSARY / LEARN-MORE — jargon links, cost chips, the dictionary popup
+   ========================================================================== */
+/* A jargon term: dotted-cyan underline that says "there's more here". */
+.jr { cursor: help; border-bottom: 2px dotted var(--c-cyan); font-weight: 600; }
+.jr:hover { background: var(--c-cyan-soft); border-bottom-color: var(--c-purple); }
+.res .lab .jr { color: inherit; }
+
+/* Action cost line → tidy token chips instead of a dot-separated run-on. */
+.action .a-cost { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.chip { display: inline-block; font-family: var(--font-display); font-size: 10.5px; font-weight: 700;
+    padding: 2px 7px; border: 2px solid var(--ink); border-radius: 4px; background: var(--c-cream); color: var(--c-purple); }
+.chip.up { color: #2f8a1c; background: #eaf6e2; }
+.chip.down { color: var(--c-orange); background: #ffeede; }
+
+/* The "this is a real trial" banner at the top of the scenario card. */
+.real-note { font-size: 12.5px; line-height: 1.5; color: var(--c-purple); background: var(--c-cream);
+    border: 2px dashed var(--c-cyan); border-radius: 5px; padding: 8px 11px; margin-bottom: 10px; }
+.real-note .nct { font-family: var(--font-mono); font-weight: 700; }
+
+/* The dictionary popup. */
+.glossary-box { max-width: 440px; background: var(--c-cyan-soft); }
+.gloss-kind { color: var(--c-purple) !important; }
+#gloss-term { text-transform: capitalize; }
+#gloss-def { min-height: 2.4em; }
+.gloss-actions { display: flex; align-items: center; gap: 10px; margin: 2px 0 14px; flex-wrap: wrap; }
+.gloss-badge { font-family: var(--font-display); font-size: 10px; font-weight: 800; padding: 3px 8px;
+    border: 2px solid var(--ink); letter-spacing: 0.04em; }
+.gloss-badge.seed { background: var(--c-green); color: var(--c-purple); }
+.gloss-badge.llm { background: var(--c-yellow); color: var(--c-purple); }
+.gloss-badge.pending { background: var(--c-orange); color: #fff; }
+
+/* Even founder cards: equal height per row, blurb fills the bottom. */
+.founder-card__blurb { flex: 1 0 auto; }
 
 @media (max-width: 680px) {
     .hud { grid-template-columns: repeat(2, 1fr); }

@@ -153,3 +153,18 @@ class ReviewResponse(BaseModel):
     letter: str  # the in-character response text
     score_modifier: int  # +/- applied to the player's final score, clamped [-25, +20]
     source: Literal["llm", "scripted"]  # so the UI can badge it honestly
+
+
+# =============================================================================
+# Glossary — the self-building "learn more" dictionary
+# =============================================================================
+
+
+class GlossaryEntry(BaseModel):
+    """One definition. `source` lets the UI badge it + decide whether to offer
+    a regenerate (only 'llm' entries are regenerable; 'seed' are hand-curated)."""
+
+    term: str
+    definition: str
+    source: Literal["seed", "llm", "pending"]
+    regenerable: bool = False

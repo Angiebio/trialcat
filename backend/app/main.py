@@ -59,6 +59,15 @@ async def lifespan(app: FastAPI):
     # on a fresh deploy with an empty volume.
     create_all_tables()
     logger.info("Database tables verified")
+    # Seed the "learn more" glossary so it's useful on first run (idempotent).
+    from app.services.glossary import seed_glossary
+    _gs = SessionLocal()
+    try:
+        n = seed_glossary(_gs)
+        if n:
+            logger.info("Glossary seeded: %s new terms", n)
+    finally:
+        _gs.close()
     yield
     logger.info("trialcat shutting down")
 
