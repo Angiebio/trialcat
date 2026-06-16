@@ -76,8 +76,11 @@ def chat(system_prompt: str, user_content: str, max_tokens: Optional[int] = None
         "Authorization": f"Bearer {settings.openrouter_api_key}",
         "Content-Type": "application/json",
         # OpenRouter likes attribution headers; harmless if ignored.
+        # NOTE: header values must be latin-1 — keep this ASCII (an em-dash here
+        # once threw UnicodeEncodeError before the request even left, a 500 that
+        # only the live key exposed). Plain hyphen, on purpose.
         "HTTP-Referer": "https://trialcat.ai",
-        "X-Title": "trialcat — Race to Approval",
+        "X-Title": "trialcat Race to Approval",
     }
     messages = [
         {"role": "system", "content": system_prompt},
@@ -111,8 +114,10 @@ def chat(system_prompt: str, user_content: str, max_tokens: Optional[int] = None
             text = (data.get("choices") or [{}])[0].get("message", {}).get("content")
             if text and text.strip():
                 return text.strip()
-        except requests.RequestException as e:
-            logger.warning("OpenRouter %s call failed: %s", model, e)
+        except Exception as e:
+            # Catch EVERYTHING (network, encoding, parsing) — this feature is
+            # optional and must never 500 the game. Any failure → scripted.
+            logger.warning("OpenRouter %s call failed: %s: %s", model, type(e).__name__, e)
             continue
 
     return None  # everything errored — the reviewer goes scripted
