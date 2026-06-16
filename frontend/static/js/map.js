@@ -93,6 +93,7 @@ async function fetchJSON(url) {
 function buildFilterParams() {
     const params = new URLSearchParams();
     const area = document.getElementById('filter-area').value;
+    const studyType = document.getElementById('filter-study-type').value;
     const phase = document.getElementById('filter-phase').value;
     const status = document.getElementById('filter-status').value;
     const intervention = document.getElementById('filter-intervention').value;
@@ -102,6 +103,7 @@ function buildFilterParams() {
     const endDate = document.getElementById('filter-end').value;
 
     if (area) params.set('therapeutic_area', area);
+    if (studyType) params.set('study_type', studyType);
     if (phase) params.set('phase', phase);
     if (status) params.set('status', status);
     if (intervention) params.set('intervention_type', intervention);
@@ -123,11 +125,22 @@ function buildFilterParams() {
 // their options on the fly when the intervention type changes.
 let filterData = null;
 
+// Turn CT.gov's SHOUTY enum values into human labels for the dropdown, while
+// keeping the raw value for the query (INTERVENTIONAL -> "Interventional",
+// EXPANDED_ACCESS -> "Expanded Access").
+function prettifyTypes(values) {
+    return (values || []).map(v => ({
+        value: v,
+        label: v.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    }));
+}
+
 async function loadFilters() {
     try {
         const data = await fetchJSON('/api/filters');
         filterData = data;
         populateSelect('filter-area', data.therapeutic_areas);
+        populateSelect('filter-study-type', prettifyTypes(data.study_types));
         populateSelect('filter-phase', data.phases);
         populateSelect('filter-status', data.statuses);
         populateSelect('filter-intervention', data.intervention_types);
@@ -179,6 +192,14 @@ function updateDrilldowns() {
     // FDA device class is device-only.
     dcGroup.style.display = (itype === 'DEVICE' && (filterData?.device_classes || []).length)
         ? '' : 'none';
+
+    // Phases are a drug concept; CT.gov reports devices under phase=NA. So when
+    // DEVICE is picked, default Phase to NA so the cohort actually makes sense.
+    // (Still changeable — a handful of device trials run combined with a drug.)
+    if (itype === 'DEVICE') {
+        const phaseSel = document.getElementById('filter-phase');
+        if ([...phaseSel.options].some(o => o.value === 'NA')) phaseSel.value = 'NA';
+    }
 }
 
 function populateSelect(elementId, values) {
@@ -201,6 +222,7 @@ function populateSelect(elementId, values) {
 
 function resetFilters() {
     document.getElementById('filter-area').value = '';
+    document.getElementById('filter-study-type').value = '';
     document.getElementById('filter-phase').value = '';
     document.getElementById('filter-status').value = '';
     document.getElementById('filter-intervention').value = '';
@@ -224,7 +246,10 @@ async function loadWorldGeoJSON() {
     const resp = await fetch('/static/geo/countries.geojson');
     const geojson = await resp.json();
     worldGeoLayer = L.geoJSON(geojson, {
-        style: () => defaultStyle(),
+        // Base style IS the data choropleth, so Leaflet's resetStyle (fired on
+        // mouseout) restores each country's trial-count color instead of wiping
+        // it to blank. (Before this, hovering erased the green permanently.)
+        style: (f) => worldStyle(f),
         onEachFeature: onEachCountry,
     }).addTo(map);
 }
@@ -354,7 +379,9 @@ async function drillDownToStates() {
     // Create state layer if not already created
     if (stateGeoLayer) map.removeLayer(stateGeoLayer);
     stateGeoLayer = L.geoJSON(stateGeoData, {
-        style: () => defaultStyle(),
+        // Same fix as the world layer: data choropleth as the base style so
+        // mouseout restores the state's color instead of blanking it.
+        style: (f) => stateStyle(f),
         onEachFeature: onEachState,
     }).addTo(map);
 
