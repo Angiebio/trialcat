@@ -258,7 +258,16 @@ function buildState(seed) {
 // ============================================================================
 // RENDER
 // ============================================================================
-function renderAll() { renderScenario(); renderHUD(); renderTension(); renderBoard(); renderReadiness(); renderActions(); renderLog(); }
+function renderAll() { renderScenario(); renderHUD(); renderTension(); renderValueBoard(); renderBoard(); renderReadiness(); renderActions(); renderLog(); }
+
+// The cat climbs the REAL 2018 board: position it along the value track by the
+// player's current product value. (Horizontal climb — the snake-path is a later
+// refinement; for now the cat advances left→right as the valuation rises.)
+function renderValueBoard() {
+  const v = Math.max(0, Math.min(100, S.res.value));
+  const cat = $('board-cat'); if (cat) cat.style.left = (6 + v / 100 * 86) + '%';
+  const now = $('vb-now'); if (now) now.textContent = valueLabel(v);
+}
 
 function renderScenario() {
   const s = S.seed;

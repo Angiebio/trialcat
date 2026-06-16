@@ -33,7 +33,7 @@
                 money, the clock, or the competition buries it. <b>Can you run your trials fast enough?</b>
             </p>
             <button class="cta-big" id="btn-begin">Start your program ▶</button>
-            <img class="hero-cover" src="/static/img/board.png" alt="The Strategy Game (for Regulatory Affairs) — the game board: drive your product's value from $100k to a $9B exit" loading="lazy">
+            <img class="hero-cover" src="/static/img/board.svg" alt="The Strategy Game (for Regulatory Affairs) — the game board: drive your product's value from $100k to a $9B exit" loading="lazy">
 
             <div class="how-row">
                 <div class="how-card">
@@ -107,6 +107,15 @@
         <div class="tension">
             <div class="lab"><span>🏁 Competitor progress</span><span id="tension-pct">0%</span></div>
             <div class="track"><i id="tension-bar" style="width:0%"></i></div>
+        </div>
+
+        <!-- The REAL board: the cat climbs the product-value track ($100k → $9B) -->
+        <div class="value-board-wrap">
+            <div class="vb-label">📈 Your climb up the value board — <b id="vb-now">$100k</b></div>
+            <div class="value-board" id="value-board">
+                <img src="/static/img/board.svg" alt="The Strategy Game board — the product-value track from $100k to a $9B exit">
+                <span class="board-cat" id="board-cat">🐈</span>
+            </div>
         </div>
 
         <div class="board" id="board"><!-- stage nodes filled by JS --></div>

@@ -58,6 +58,9 @@ async def lifespan(app: FastAPI):
     # Ensure DB tables exist on startup — no more "no such table" crashes
     # on a fresh deploy with an empty volume.
     create_all_tables()
+    # Idempotent column migrations for an existing prod volume (v1 → v2).
+    from app.db import ensure_columns
+    ensure_columns()
     logger.info("Database tables verified")
     # Seed the "learn more" glossary so it's useful on first run (idempotent).
     from app.services.glossary import seed_glossary

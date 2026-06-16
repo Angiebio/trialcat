@@ -63,6 +63,38 @@ def create_all_tables() -> None:
     Base.metadata.create_all(bind=engine)
 
 
+def ensure_columns() -> None:
+    """Hand-rolled, idempotent column migrations for a long-lived prod volume.
+
+    create_all() makes new TABLES but never ALTERs an existing one — so a v1
+    database (already on the Fly volume with 23k trials) won't grow v2's new
+    columns on its own. The map would then 500 on a missing column. This adds
+    them by hand: a cheap PRAGMA check, safe to run on every startup.
+
+    The discipline here is 'fail loud, but migrate quietly': a missing column on
+    a shipped table is a known, expected gap on upgrade, not a bug — so we close
+    it without drama, and log that we did.
+    """
+    import logging
+
+    from sqlalchemy import text
+
+    log = logging.getLogger("trialcat")
+    # (table, column, sqlite_type) added after that table first shipped.
+    additions = [
+        ("interventions", "product_category", "VARCHAR(48)"),  # v2.1 drill-down
+    ]
+    with engine.begin() as conn:
+        for table, column, coltype in additions:
+            rows = list(conn.execute(text(f"PRAGMA table_info({table})")))
+            if not rows:
+                continue  # table doesn't exist yet — create_all will build it correctly
+            existing = {r[1] for r in rows}
+            if column not in existing:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"))
+                log.info("migration: added %s.%s", table, column)
+
+
 def get_db() -> Generator[Session, None, None]:
     """FastAPI dependency — yields a DB session and ensures cleanup.
 
