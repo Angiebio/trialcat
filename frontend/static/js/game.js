@@ -196,14 +196,14 @@ function register() {
 }
 
 function renderCharacters() {
+  // The real 2018 character cards (name, role, art, token disc are all baked
+  // into the image); the blurb adds the gameplay bonus the cards don't show.
   $('characters-grid').innerHTML = CHARACTERS.map(c => `
-    <button class="char-card" data-char="${c.id}">
-      <div class="char-emoji">${c.emoji}</div>
-      <div class="char-name">${c.name}</div>
-      <div class="char-role">${c.role}</div>
-      <div class="char-blurb">${c.blurb}</div>
+    <button class="founder-card sticker-tilt" data-char="${c.id}">
+      <img class="founder-card__art" src="/static/img/founders/${c.id}.png" alt="${escapeHtml(c.name)} — ${escapeHtml(c.role)}" loading="lazy">
+      <span class="founder-card__blurb">${escapeHtml(c.blurb)}</span>
     </button>`).join('');
-  $('characters-grid').querySelectorAll('.char-card').forEach(b =>
+  $('characters-grid').querySelectorAll('.founder-card').forEach(b =>
     b.addEventListener('click', () => { chosenChar = CHARACTERS.find(c => c.id === b.dataset.char); startGame(); }));
 }
 
