@@ -402,12 +402,120 @@ a { color: var(--c-purple); text-decoration-color: var(--c-cyan); }
 .action.card-play:disabled { opacity: 0.55; }
 .action.card-play:disabled .card-head { background: #9a93a6; color: var(--c-cream); }
 
+/* ======================================================================== */
+/* BOARD MODE — the snake, the tokens, the spinner, the deck flip.           */
+/* Sticker-comic to the bone: hard ink, SOLID offset shadows, no blur.       */
+/* ======================================================================== */
+
+/* The board stage: the generated SVG fills it; tokens layer on top by %. */
+.board-stage { position: relative; margin: 4px 0 14px; border: 3px solid var(--ink);
+    border-radius: 8px; box-shadow: 7px 7px 0 0 var(--ink); overflow: hidden; background: var(--c-cyan); }
+#board-svg { display: block; line-height: 0; }
+#board-svg svg.board-svg-el { display: block; width: 100%; height: auto; }
+/* current-square highlight — pulse the landed tile's outline (no transform, so it
+   never fights the <g> translate that places the tile). */
+@keyframes curPulse { 0%,100% { stroke: var(--ink); stroke-width: 4; } 50% { stroke: var(--c-orange); stroke-width: 7; } }
+.tile.is-current .tile-face { animation: curPulse 1.05s ease-in-out infinite; }
+
+/* "Next gate" objective pill — sticker-comic, readable where the tiles aren't. */
+.gate-status { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 12px; margin: 0 0 12px;
+    background: var(--c-cream); border: 3px solid var(--ink); border-radius: 8px; box-shadow: 4px 4px 0 0 var(--ink);
+    padding: 8px 14px; font-family: var(--font-display); font-weight: 800; }
+.gate-status .gs-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--c-purple); }
+.gate-status .gs-name { font-size: 16px; color: var(--ink); }
+.gate-status .gs-ready { font-size: 13px; font-weight: 700; color: var(--c-purple-80); }
+.gate-status .gs-bar { flex: 1 1 80px; min-width: 80px; height: 12px; background: var(--c-cream-deep);
+    border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
+.gate-status .gs-bar > i { display: block; height: 100%; transition: width .4s ease;
+    background: repeating-linear-gradient(45deg, var(--c-green) 0 8px, #4ca037 8px 16px); }
+.gate-status.ready { background: var(--c-green-soft); }
+.gate-status.ready .gs-bar > i { background: var(--c-green); }
+
+/* Avatar tokens — die-cut discs that ride above (cat) / below (dog) their tile. */
+.token { position: absolute; left: 6%; top: 80%; z-index: 6;
+    width: clamp(34px, 5vw, 50px); height: clamp(34px, 5vw, 50px);
+    display: grid; place-items: center; font-size: clamp(17px, 2.7vw, 26px);
+    background: var(--c-cream); border: 3px solid var(--ink); border-radius: 50%;
+    box-shadow: 4px 5px 0 0 var(--ink); will-change: left, top, transform; pointer-events: none; }
+.token::after { position: absolute; top: calc(100% - 2px); left: 50%; transform: translateX(-50%);
+    font-family: var(--font-display); font-weight: 800; font-size: 9px; letter-spacing: .04em;
+    color: var(--c-cream); padding: 1px 5px; border: 2px solid var(--ink); border-radius: 4px; white-space: nowrap; }
+.token.cat { z-index: 7; }
+.token.cat::after { content: "YOU"; background: var(--c-green); color: var(--ink); }
+.token.rival { z-index: 6; filter: grayscale(.25); opacity: .94; }
+.token.rival::after { content: "RIVAL"; background: var(--c-orange); color: var(--ink); }
+
+/* The spinner dock + wheel (ux-patterns Pattern 1). */
+.spinner-dock { display: flex; justify-content: center; margin: 0 0 14px; }
+.spinner-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.spinner-stage { position: relative; width: 148px; height: 148px; filter: drop-shadow(6px 6px 0 var(--ink)); }
+.spinner-wheel { width: 100%; height: 100%; transform: rotate(0deg);
+    transition: transform 2.7s cubic-bezier(.13,.86,.27,1); transform-origin: 50% 50%; will-change: transform; }
+.spinner-pointer { position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0; border-left: 13px solid transparent; border-right: 13px solid transparent;
+    border-top: 22px solid var(--c-yellow); z-index: 3; filter: drop-shadow(0 2px 0 var(--ink)); }
+.spinner-hub { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-6deg);
+    width: 38px; height: 38px; display: grid; place-items: center; z-index: 2; background: var(--c-yellow);
+    color: var(--c-purple); font-family: var(--font-display); font-weight: 800; font-size: 13px;
+    border: 3px solid var(--ink); border-radius: 7px; box-shadow: 2px 2px 0 0 var(--ink); }
+.spinner-btn { font-family: var(--font-display); font-weight: 800; font-size: 16px; letter-spacing: .02em;
+    color: var(--c-purple); background: var(--c-green); border: 3px solid var(--ink); border-radius: 6px;
+    padding: 10px 26px; cursor: pointer; box-shadow: 4px 4px 0 0 var(--ink);
+    transition: transform .08s, box-shadow .08s, background .12s; }
+.spinner-btn:hover:not(:disabled) { background: var(--c-yellow); }
+.spinner-btn:active:not(:disabled) { transform: translate(4px,4px); box-shadow: 0 0 0 0 var(--ink); }
+.spinner-btn:disabled { background: #e6e2d6; color: #9a93a6; box-shadow: 4px 4px 0 0 #bdb6a6; cursor: not-allowed; }
+.spinner-result { font-family: var(--font-display); font-weight: 800; font-size: 13px; color: var(--c-purple);
+    min-height: 18px; text-transform: uppercase; letter-spacing: .04em; }
+
+/* Deck stacks: a color tab per deck so the four read as distinct hands. */
+.deck-rnd .card-head { background: #1f7a3a; }
+.deck-enroll .card-head { background: #b3261a; }
+.deck-fda .card-head { background: var(--c-purple); }
+.deck-funding .card-head { background: #8a6d00; }
+.deck-funding .card-suit, .deck-funding .card-head { color: var(--c-yellow); }
+
+/* Deck-draw 3D flip card (ux-patterns Pattern 2). */
+#overlay-flip .flip-mount { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.flip-scene { perspective: 1200px; width: 300px; max-width: 88vw; }
+.flip-card { position: relative; width: 100%; aspect-ratio: 3/4; transform-style: preserve-3d;
+    transition: transform .62s cubic-bezier(.2,.9,.2,1); transform: rotateY(180deg); }
+.flip-card.is-flipped { transform: rotateY(0deg); }
+.flip-face, .flip-back { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    border: 4px solid var(--ink); border-radius: 8px; box-shadow: 7px 7px 0 0 var(--ink);
+    display: flex; flex-direction: column; overflow: hidden; }
+.flip-back { transform: rotateY(0deg); background: var(--c-purple);
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,.10) 1px, transparent 0); background-size: 14px 14px;
+    align-items: center; justify-content: center; }
+.flip-back .reg-stamp { font-family: var(--font-display); font-weight: 800; font-size: 46px; color: var(--c-yellow);
+    border: 5px solid var(--c-yellow); border-radius: 12px; padding: 10px 18px; transform: rotate(-6deg);
+    text-shadow: 3px 3px 0 var(--ink); letter-spacing: -.04em; }
+.flip-back .deck-name { position: absolute; bottom: 14px; font-family: var(--font-display); font-weight: 700;
+    font-size: 13px; color: var(--c-cream); letter-spacing: .16em; text-transform: uppercase; }
+.flip-face { transform: rotateY(180deg); background: var(--c-cream); padding: 18px 16px; text-align: left; position: relative; }
+.flip-face.good { background: var(--c-green-soft); } .flip-face.bad { background: #ffe0c2; } .flip-face.swing { background: #fdf6a8; }
+.flip-face .fc-kind { font-family: var(--font-display); font-weight: 800; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--c-purple); }
+.flip-face .fc-suit { position: absolute; top: 12px; right: 14px; font-size: 22px; }
+.flip-face h3 { margin: 8px 0 8px; font-family: var(--font-display); font-weight: 800; font-size: 20px; line-height: 1.08; color: var(--c-purple); }
+.flip-face .fc-flavor { font-size: 13px; line-height: 1.5; color: var(--c-purple-80); flex: 1; overflow: auto; }
+.flip-face .fc-effect { font-family: var(--font-display); font-weight: 700; font-size: 14px; margin-top: 8px; }
+.flip-face .fc-effect .up { color: #2f8a1c; } .flip-face .fc-effect .down { color: var(--c-orange); }
+#overlay-flip #flip-ok { width: 300px; max-width: 88vw; }
+
 @media (max-width: 680px) {
+    /* Header: let the brand hold line 1 and the nav wrap to its own right-aligned
+       row, instead of shoving 4 buttons off-screen (the 114px overflow culprit). */
+    .game-header { flex-wrap: wrap; gap: 8px; padding: 9px 14px; }
+    .game-header nav { flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
+    .ghost-btn { padding: 5px 10px; font-size: 12px; }
     .hud { grid-template-columns: repeat(2, 1fr); }
-    .board { gap: 5px; } .node { min-width: 60px; padding: 8px 4px; }
     .row2 { flex-direction: column; gap: 0; }
+    .spinner-stage { width: 116px; height: 116px; }
+    .token::after { font-size: 8px; padding: 0 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
-    .token, .tension .track > i { animation: none !important; }
+    .token, .tension .track > i, .tile.is-current .tile-face { animation: none !important; }
+    .flip-card { transition: none; }
+    .spinner-wheel { transition: transform .25s linear !important; }
     .screen.active, .card-modal, .review-modal, .end-modal, .choice-box, .shake { animation: none !important; }
 }

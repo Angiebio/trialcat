@@ -83,18 +83,22 @@ def _rigor(text: str) -> int:
 def _classify(req: ReviewRequest) -> ReviewVerdict:
     """Verdict from the metrics. Data dominates; integrity shortcuts hurt."""
     score = (
-        0.55 * req.evidence_score
-        + 0.25 * req.reputation_score
+        0.80 * req.evidence_score
+        + 0.15 * req.reputation_score
         + _rigor(req.submission_rationale) * 4
         - req.integrity_flags * 10
     )
     if len(req.submission_rationale) < 50:
         score -= 8
-    if score >= 78:
+    # Verdict is DATA-DOMINANT (0.80*data): max your evidence and you approve, with
+    # reputation + rigor as bonus margin and integrity shortcuts (-10/flag) the real
+    # penalty. The old 0.55*data/0.25*rep + 78 bar was a knife-edge (needed data~97 AND
+    # rep~100 at once) that the 28-turn clock almost never reached. Keeps "data > narrative."
+    if score >= 70:
         return "APPROVED"
-    if score >= 58:
+    if score >= 50:
         return "APPROVABLE_WITH_DEFICIENCIES"
-    if score >= 38:
+    if score >= 30:
         return "COMPLETE_RESPONSE_LETTER"
     return "REFUSE_TO_FILE"
 

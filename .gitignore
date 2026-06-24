@@ -92,3 +92,14 @@ exploration/
 roadmap.md
 ROADMAP_PRIVATE.md
 docs/roadmap_private.md
+
+# --- Board Mode design phase (_design/) ---
+# Keep the curated specs as build provenance; drop the test scripts, screenshots,
+# mobile/ captures, and the verbose agent scratch .md dumps.
+roadmaps/_design/*
+!roadmaps/_design/board-spec.json
+!roadmaps/_design/mechanics-spec.json
+!roadmaps/_design/squares.json
+!roadmaps/_design/ux-patterns.md
+!roadmaps/_design/board-sample.svg
+!roadmaps/_design/balance-v3.json

@@ -1,0 +1,142 @@
+{
+  "_meta": {
+    "title": "TrialCat \"Race to Approval\" — BOARD_SPEC (merged synthesis)",
+    "version": "1.0 (16JUN2026)",
+    "author": "Flame / Real Cat AI Labs — Board Synthesis lead",
+    "synthesizes": [
+      "Angle A Faithful Evolution (purple gate header + REG seal + waypoint-derived-from-tile-geometry)",
+      "Angle B Bold Sticker-Snake (color-by-type legibility + single-source-of-truth pitch constants)",
+      "Angle C Living Diorama (cyan road threaded behind tiles + physical standee tokens with hard cast shadow)"
+    ],
+    "soul_note": "The 2018 painting IS a value snake: $100k bottom-right -> $9B top-left, painted specials (grant funding, corp venture, Fire the CRO?, Boot-strap it!, Get acquired?, You are out of money!, Draw +1 staff & REG). We rebuild it as a code-generated SVG so square centers are computable, but keep the soul: cyan field, 32px white grid, REG stamp, cream die-cut tiles, hard ink, solid offset shadows.",
+    "sibling_files": {
+      "sample_svg": "board-sample.svg (the literal visual target — open in a browser)",
+      "engine": "frontend/static/js/game.js",
+      "css": "frontend/static/css/game.css",
+      "template": "frontend/templates/game.html",
+      "original_art": "frontend/static/img/board.svg (viewBox 810.16x320.98)"
+    }
+  },
+
+  "chosen_direction": "MERGE: a code-generated SVG boustrophedon snake (Angle B's legibility-first color-by-type tiles) threaded by Angle C's raised cyan road, gated by Angle A's purple-authority milestone tiles + REG seal. We DROP Angle A's lock to the cramped 810x321 viewBox (too tight for 24 tiles + two avatar discs + a spinner on mobile) and Angle C's heavy 3-layer parallax diorama (real illustration cost; ship later as a phase-2 backdrop). The board is ONE buildBoardSVG(pathway, state) -> innerHTML call on a roomy 960x560 viewBox. Both tile x/y AND the avatar waypoint polyline derive from the SAME pitch constants (single source of truth) so avatars can never drift off-square. 24 nodes (not 40): 4 rows x 6 cols reads cleanly, maps 5 milestone gates + START + EXIT + funding/hazard/fork/deck specials onto exact indices, and is honest about the painting's ~36 squares without over-sampling into meaningless tween tiles. Capital is OFF the tiles (lives in the HUD per locked spec #2); tiles show product-value bands as place-names, not prices. Color is assigned by MEANING exactly like game.css: cyan=value, green=funding/go, red=hazard, gold=milestone, purple=fork/authority, cream=deck.",
+
+  "viewBox": "0 0 960 560",
+  "num_squares": 24,
+
+  "layout_algorithm": {
+    "summary": "Boustrophedon (serpentine) over ROWS=4, COLS=6, climbing from bottom-right (node 0, $100k) to top (node 23, $9B EXIT). Bottom row travels RIGHT->LEFT; rows then alternate. Every node center (cx,cy) is computed from constants; the ordered array of centers IS the avatar waypoint polyline. NO hand-pixel-pushing.",
+    "constants": {
+      "VB_W": 960, "VB_H": 560,
+      "ROWS": 4, "COLS": 6, "N": 24,
+      "MARGIN_X": 96, "MARGIN_Y": 78,
+      "COL_PITCH": 128, "ROW_PITCH": 180,
+      "TILE_W": 104, "TILE_H": 84,
+      "GATE_W": 108, "GATE_H": 108,
+      "TILE_RX": 6,
+      "SHADOW_DX": 6, "SHADOW_DY": 7,
+      "_comment": "cx range: 96..(96+5*128)=96..736 on a forward row; +148 trailing room to 884 on the bottom start row offset. We anchor cols so node0 (col5,row3) lands at x=884 = MARGIN_X + 5*COL_PITCH + 148? NO — keep it clean: node0 is the FIRST node and sits at the far-right of the bottom row. See formula: we let bottom row use an EXTRA right slot for START so $100k reads as the corner. Simpler canonical formula below uses uniform pitch; START just happens to be the rightmost col of row3."
+    },
+    "index_to_center_js": "// Vanilla JS. row 0 = TOP, row (ROWS-1)=3 = BOTTOM. The SNAKE starts at the\n// BOTTOM row and climbs, so we map snake-index i -> visual (row,col) with the\n// bottom row first and a serpentine flip.\nfunction nodeCenter(i) {\n  const ROWS=4, COLS=6, MX=96, MY=78, CP=128, RP=180;\n  // snakeRow 0 = bottom (start), snakeRow 3 = top (exit)\n  const snakeRow = Math.floor(i / COLS);              // 0..3\n  const idxInRow = i % COLS;                            // 0..5\n  // bottom row (snakeRow 0) travels RIGHT->LEFT; alternate each row up.\n  // 'forward' here means left->right in screen space.\n  const goLeftToRight = (snakeRow % 2 === 1);          // row0 R->L, row1 L->R, ...\n  const col = goLeftToRight ? idxInRow : (COLS - 1 - idxInRow);\n  const visualRow = (ROWS - 1) - snakeRow;             // bottom row -> visualRow 3\n  const cx = MX + col * CP;                            // 96 .. 736\n  const cy = MY + visualRow * RP;                      // 78,258? -> use MY + row*RP = 78,258... \n  // NOTE: with MY=78 and RP=180 the four row centers are y = 78, 258, 438, 618.\n  // 618 overflows 560. So clamp the band: we actually want y = {78,178? }.\n  // CANONICAL row-y table (kept explicit so it never drifts):\n  const ROW_Y = [78, 178, 298, 478];                   // top..bottom (visualRow 0..3)\n  return { cx, cy: ROW_Y[visualRow] };\n}\n// The waypoint polyline = NODES.map((_,i)=>nodeCenter(i)). Avatars animate node->node.\n// ROW_Y is non-uniform on purpose: tighter at top (small tiles), roomier at bottom\n// where START/HAZARD carry more text. Tune ROW_Y, never the formula.",
+    "row_y_table": [78, 178, 298, 478],
+    "node_centers": [
+      {"i": 0,  "cx": 884, "cy": 478, "_note": "START $100k — bottom-RIGHT. Special: col5 of bottom row uses the trailing right slot (MX+5*CP=736) PLUS a +148 start offset so the garage reads as the true corner. In the generic formula node0 sits at cx=736; the sample nudges it to 884 for the START flourish. Engine MUST pick one: recommend uniform cx=736 for node0 and DROP the flourish, OR widen viewBox to 1012 to fit cx=884. The sample uses 884 with viewBox 960 because START bleeds slightly into the right margin band, which is fine (it's the corner)."},
+      {"i": 1,  "cx": 756, "cy": 478},
+      {"i": 2,  "cx": 628, "cy": 478},
+      {"i": 3,  "cx": 500, "cy": 478},
+      {"i": 4,  "cx": 372, "cy": 478},
+      {"i": 5,  "cx": 244, "cy": 478},
+      {"i": 6,  "cx": 96,  "cy": 388, "_note": "U-turn GATE on the bottom-left bend, sits between row3 and row2"},
+      {"i": 7,  "cx": 224, "cy": 298},
+      {"i": 8,  "cx": 352, "cy": 298},
+      {"i": 9,  "cx": 480, "cy": 298},
+      {"i": 10, "cx": 608, "cy": 298},
+      {"i": 11, "cx": 736, "cy": 298},
+      {"i": 12, "cx": 864, "cy": 298},
+      {"i": 13, "cx": 864, "cy": 208, "_note": "U-turn GATE on the right bend, between row2 and row1"},
+      {"i": 14, "cx": 736, "cy": 178},
+      {"i": 15, "cx": 608, "cy": 178},
+      {"i": 16, "cx": 480, "cy": 178},
+      {"i": 17, "cx": 352, "cy": 178},
+      {"i": 18, "cx": 224, "cy": 178},
+      {"i": 19, "cx": 96,  "cy": 178},
+      {"i": 20, "cx": 96,  "cy": 88,  "_note": "U-turn DECK (Boot-strap) on the top-left bend"},
+      {"i": 21, "cx": 224, "cy": 78},
+      {"i": 22, "cx": 480, "cy": 78, "_note": "FINAL GATE NDA/BLA — face Dr. Vance"},
+      {"i": 23, "cx": 736, "cy": 78, "_note": "EXIT $9B — the apex / glass tower"}
+    ],
+    "implementation_note": "The node_centers array above is the EXACT polyline used by the sample SVG, with U-turn/gate nodes (6,13,20) deliberately placed ON the bends rather than strictly on the COLS grid — that's what makes the snake visibly turn. The engine should hardcode this 24-entry NODES table as data (each entry: {cx,cy,type,trigger,label}) rather than deriving purely from the formula, because the 3 bend-gates break the uniform grid on purpose. The nodeCenter() formula is the DERIVATION for the 21 on-grid tiles; the 3 bend nodes are explicit overrides. Single source of truth = this JSON's node_centers, imported into game.js.",
+    "track_path_d": "M 884 478 H 156 Q 96 478 96 418 V 358 Q 96 298 156 298 H 804 Q 864 298 864 238 V 178 Q 864 118 804 118 H 156 Q 96 118 96 78 — the raised cyan road, drawn behind tiles in 3 strokes (22px ink, 14px cyan #3fc6e2, 3px white dashed centerline). It threads the node centers and rounds every U-turn so the climb visibly bends."
+  },
+
+  "tile_render": {
+    "shared_law": "Every tile = (1) SOLID offset shadow rect FIRST at translate(6,7), fill #1b1b1b, never blurred; (2) face rect, stroke #1b1b1b width 4, rx 6; (3) halftone wash rect fill url(#halftone); (4) type content. Fonts: Bricolage Grotesque 800 for labels, value numbers; Inter for any body. The square index sits tiny top-left. Color is by MEANING (game.css palette). Tiles authored as a reusable JS template tileSVG(node) that switches on node.type.",
+    "defs_needed": "<pattern id=\"grid\" w=32 h=32>#2bb8d8 + white grid lines opacity .45 width 2</pattern>; <pattern id=\"halftone\" w=7 h=7>#1b1b1b dot r1.15 opacity .09</pattern>; <g id=\"regstamp\">yellow #e8e52a rounded rect 30x26 ink stroke 3, text 'REG' purple #4a0873</g>.",
+    "types": {
+      "start": "GREEN face #5bb545. Label 'START' (size13), big '$100k' (size26 ink), sub 'the garage'. The GO corner. 104x84.",
+      "value": "CREAM face #FAFAF5 with a cyan #2bb8d8 cap band (top 22px) carrying 'VALUE' in cream; big value-band number in purple #4a0873 (e.g. $25M, $300M, $2.5B). 104x84. This is the workhorse ~46% of tiles. Number comes from VALUE_BANDS in game.js — it's a PLACE name, not the capital mechanic.",
+      "funding": "GREEN-SOFT face #c7e3b1. Corner drop-chip '+$' on a #5bb545 badge rotated -8deg. Label 'GRANT' or 'FUNDING' (#2f8a1c), body 'You got funding!' / 'Corp venture funds!'. Trigger: +capital. 104x84.",
+      "hazard": "RED face #ffb3a0. Corner skull badge on #ff3b3b rotated +7deg. Label 'HAZARD' (#b3261a), body 'You are out of money!' Landing here = bankrupt check / capital drain. 104x84.",
+      "fork": "PURPLE-TINT face #d9c2ef. Corner split-arrow badge (ink, no fill). Label 'FORK' (#4a0873), body the choice ('Hire the CRO?', 'Fire the CEO?', 'Get acquired?'). Fires a RAW_DECK 'choose' card (decision modal). 104x84.",
+      "deck": "CREAM face with a mini stacked-card glyph (two rotated rects, yellow+cyan). Label 'DRAW +1 STAFF & a REG card' or a Boot-strap event. Pulls from a deck / fires an event. 104x84 (top-bend deck node uses 104x80).",
+      "milestone": "GOLD face #e8e52a, TALLER 108x108. Purple #4a0873 authority ribbon across the top ('⛓ GATE'), stage name (Pre-IND/Phase 1/Phase 2/Phase 3 — swaps to Concept/Pre-Sub/Bench/Pivotal by pathway), a readiness LOCK bar (white track + green fill showing data vs need), 'NEED N DATA' line, and the REG seal pressed bottom-right. You must have readiness >= stage.need to pass.",
+      "exit": "GOLD face #e8e52a, BIG 116x92. Trophy glyph, 'EXIT', huge '$9B' in red #b3261a. The apex / glass tower. Reaching it (after the final gate clears via Dr. Vance) = WIN.",
+      "final_gate": "GOLD face 116x92 with a RED #b3261a authority ribbon ('★ FINAL GATE'), 'NDA/BLA' (or 'Submission'), 'FACE DR. VANCE', REG seal. This is node 22 — clearing it opens the existing openReview() Dr. Vance flow."
+    },
+    "exact_value_tile_svg": "<g transform=\"translate(CX,CY)\"><rect x=\"-52\" y=\"-42\" width=\"104\" height=\"84\" rx=\"6\" fill=\"#1b1b1b\" transform=\"translate(6,7)\"/><rect x=\"-52\" y=\"-42\" width=\"104\" height=\"84\" rx=\"6\" fill=\"#FAFAF5\" stroke=\"#1b1b1b\" stroke-width=\"4\"/><rect x=\"-52\" y=\"-42\" width=\"104\" height=\"84\" rx=\"6\" fill=\"url(#halftone)\"/><rect x=\"-52\" y=\"-42\" width=\"104\" height=\"22\" rx=\"6\" fill=\"#2bb8d8\" opacity=\"0.85\"/><path d=\"M-52 -20 H52\" stroke=\"#1b1b1b\" stroke-width=\"2\"/><text x=\"0\" y=\"-25\" text-anchor=\"middle\" font-weight=\"800\" font-size=\"11\" fill=\"#FAFAF5\">VALUE</text><text x=\"0\" y=\"10\" text-anchor=\"middle\" font-weight=\"800\" font-size=\"22\" fill=\"#4a0873\">$25M</text></g>",
+    "exact_gate_tile_svg": "<g transform=\"translate(CX,CY)\"><rect x=\"-54\" y=\"-54\" width=\"108\" height=\"108\" rx=\"6\" fill=\"#1b1b1b\" transform=\"translate(6,7)\"/><rect x=\"-54\" y=\"-54\" width=\"108\" height=\"108\" rx=\"6\" fill=\"#e8e52a\" stroke=\"#1b1b1b\" stroke-width=\"4\"/><rect x=\"-54\" y=\"-54\" width=\"108\" height=\"108\" rx=\"6\" fill=\"url(#halftone)\"/><path d=\"M-54 -48 a6 6 0 0 1 6 -6 H48 a6 6 0 0 1 6 6 V-28 H-54 Z\" fill=\"#4a0873\"/><path d=\"M-54 -28 H54\" stroke=\"#1b1b1b\" stroke-width=\"3\"/><text x=\"0\" y=\"-37\" text-anchor=\"middle\" font-weight=\"800\" font-size=\"12\" fill=\"#FAFAF5\">⛓ GATE</text><text x=\"0\" y=\"-6\" text-anchor=\"middle\" font-weight=\"800\" font-size=\"16\" fill=\"#4a0873\">Phase 2</text><g transform=\"translate(0,14)\"><rect x=\"-34\" y=\"-8\" width=\"68\" height=\"16\" rx=\"3\" fill=\"#fff\" stroke=\"#1b1b1b\" stroke-width=\"3\"/><rect x=\"-34\" y=\"-8\" width=\"48\" height=\"16\" rx=\"3\" fill=\"#5bb545\" stroke=\"#1b1b1b\" stroke-width=\"3\"/></g><text x=\"0\" y=\"40\" text-anchor=\"middle\" font-weight=\"800\" font-size=\"11\" fill=\"#4a0873\">NEED 22 DATA</text><use href=\"#regstamp\" x=\"34\" y=\"40\"/></g>",
+    "anti_mirror_rule": "Tiles are placed by transform=translate(cx,cy) only — NEVER scaleX(-1) — so on right-to-left rows the value text stays upright ($25M never renders as M52$). The serpentine flip lives in the COLUMN index math, not in a tile transform.",
+    "non_negotiables": "rx never > 6 on a tile face. Shadow is a solid offset rect, never a CSS/SVG blur or feGaussianBlur. No soft gradients (the only gradients allowed are the optional cyan road surface). No shadcn rounded-green-card look. Halftone + ink outline + offset shadow on everything."
+  },
+
+  "milestone_slots": {
+    "gate_node_indices": [6, 10, 13, 17, 22],
+    "_explanation": "5 milestone gates at fixed snake indices. Indices 6, 13, 20 are the three U-turn BEND nodes; we put gates on 6 and 13 (visually they interrupt the climb at the turns) plus interior gates at 10 and 17, and the FINAL gate at 22 (top row, before EXIT). Node 20 (top-left bend) is a DECK/Boot-strap node, not a gate. EXIT is node 23.",
+    "stage_to_node": {
+      "stage_0": {"node": 6,  "drug": "Pre-IND", "device": "Concept",      "need_from": "PATHWAYS[pathway].stages[0].need"},
+      "stage_1": {"node": 10, "drug": "Phase 1", "device": "Pre-Sub (Q-Sub)", "need_from": "PATHWAYS[pathway].stages[1].need"},
+      "stage_2": {"node": 13, "drug": "Phase 2", "device": "Bench & Biocompat", "need_from": "PATHWAYS[pathway].stages[2].need"},
+      "stage_3": {"node": 17, "drug": "Phase 3", "device": "Pivotal / 510(k) vs PMA", "need_from": "PATHWAYS[pathway].stages[3].need"},
+      "stage_4_final": {"node": 22, "drug": "NDA/BLA", "device": "Submission", "submission": true, "fires": "openReview() — face Dr. Vance", "need_from": "PATHWAYS[pathway].stages[4].need"}
+    },
+    "label_swap_rule": "Gate geometry NEVER changes between drug and device. Only the gate's stage NAME and need value swap, pulled live from PATHWAYS[S.pathway].stages[k]. buildBoardSVG(pathway, state) reads S.pathway and stamps the right label set. This honors locked decision #5 with one geometry.",
+    "special_square_index_map": {
+      "_comment": "The painted 2018 specials pinned to snake indices, near their original positions. funding=green, hazard=red, fork=purple, deck=cream.",
+      "1":  {"type": "value",   "band": "$700k"},
+      "2":  {"type": "funding", "trigger": "grant_funding",   "effect": "+capital", "art": "You got the grant funding!"},
+      "3":  {"type": "deck",    "trigger": "draw_staff_reg",  "effect": "draw +1 staff & a REG card", "art": "Draw +1 staff & +1 REG card"},
+      "4":  {"type": "hazard",  "trigger": "out_of_money",     "effect": "bankrupt_check / capital drain", "art": "You are out of money!"},
+      "8":  {"type": "fork",    "trigger": "EVT-032",          "effect": "Hire a CRO? choice", "art": "Hire CRO?"},
+      "11": {"type": "funding", "trigger": "corp_venture",     "effect": "+capital", "art": "Corporate venture funds awarded!"},
+      "15": {"type": "fork",    "trigger": "EVT-031",          "effect": "Fire the CEO? choice", "art": "Fire the CEO?"},
+      "18": {"type": "fork",    "trigger": "EVT-030",          "effect": "Get acquired? SELL / No thanks buyout fork", "art": "Get acquired? Sell! $750k / No thanks!"},
+      "20": {"type": "deck",    "trigger": "EVT-036",          "effect": "Boot-strap it! coin flip", "art": "Boot-strap it!"}
+    },
+    "trigger_binding_note": "The 36 RAW_DECK REG cards spatialize: 'choose' cards (EVT-029..035) bind to FORK squares; coin/dice swingy cards can fire on DECK squares; good/bad cards (EVT-001..024) are drawn when landing on plain VALUE squares OR via the four action decks. A SPECIAL_TILES table (above) is authored data Angie eyeballs against board.png before lock — straightforward, explicit, honors canon."
+  },
+
+  "avatar_anim": {
+    "token_design": "Each avatar = a die-cut DISC: solid offset shadow circle (translate 4,5 fill #1b1b1b) UNDER a cream #FAFAF5 circle (stroke #1b1b1b width 3), emoji centered, plus a COLLAR CHIP rounded rect below the glyph. CAT (you): r=24, green chip #5bb545 reading 'YOU', rides ABOVE its tile (anchored ~56px above tile center). DOG (rival): r=22, orange chip #f5841f reading 'RIVAL', rides BELOW its tile, mirrored scaleX(-1) + grayscale(0.2) opacity .92 — carries the existing .board-rival visual language straight from game.css. Because cat is above and dog is below, they never overlap when sharing a square.",
+    "climb_tween_js": "// One transform transition PER square climbed, queued, so a spin of 4 reads as\n// four discrete hops (not a blur). Reuse the .board-cat curve already in css.\nasync function climb(token, fromIndex, steps) {\n  for (let s = 1; s <= steps; s++) {\n    const i = fromIndex + s;\n    const { cx, cy } = NODES[i];           // single source of truth\n    const yAnchor = token.dataset.role === 'cat' ? cy - 56 : cy + 56;\n    token.style.transition = 'transform .18s cubic-bezier(.2,.8,.2,1)';\n    token.style.transform = `translate(${cx}px, ${yAnchor}px)`;\n    token.classList.add('hop');            // CSS @keyframes comic bounce\n    await wait(180);\n    token.classList.remove('hop');\n    burnCapital(CAPITAL_PER_STEP);         // each hop burns fuel (HUD)\n    spawnCapitalChip(cx, yAnchor);         // '-$Xm' floats up & fades\n  }\n}",
+    "hop_keyframes_css": "@keyframes hop { 0%{} 35%{ transform: translate(var(--cx),calc(var(--cy) - 8px)) scale(1.12); } 60%{ transform: translate(var(--cx),var(--cy)) scaleY(0.92); } 100%{} } /* comic squash-stretch: up 8px + scale 1.12 at apex, settle. translateY(-6..-8) at apex, scale 1->1.18->0.92->1 family. Honors prefers-reduced-motion (game.css already drops .token animation) — under reduced motion, climb() does a single straight tween, no bounce.",
+    "dog_difference": "Dog is mirrored (scaleX(-1)) so it reads as CHASING, desaturated grayscale(0.2) opacity .92, smaller r=22, orange RIVAL chip, and rides BELOW the tile on a slightly lower z so the cat reads foreground when neck-and-neck. The dog moves on its OWN waypoint sync (its competitor progress), not the player's spin.",
+    "scoop_moment": "If the dog reaches the 'first to file' node (the final gate, node 22) before the cat, the dog plants a tiny flag standee at that node, the board gets the existing .shake screen-shake, the dog disc gains a red halftone ring (the .tension repeating-linear-gradient), and the run ends beaten_to_market (existing outcome).",
+    "bankrupt_moment": "On capital hitting 0, the cat disc flips to a '💸' puff and drops; existing lose('bankrupt') fires. Offset shadow stays solid throughout — never blurred."
+  },
+
+  "spinner_widget": {
+    "concept": "A comic die-cut cyan WHEEL (Angie prefers a spinner over dice). Four color-by-meaning quadrants (cyan/gold/green/orange), numbers 1-4, a hard-shadow needle. Lives docked in the HUD; spinning yields 1-4 which drives climb(steps).",
+    "svg_markup": "<g class=\"spinner\" transform=\"translate(CX,CY)\"><circle cx=\"6\" cy=\"7\" r=\"56\" fill=\"#1b1b1b\"/><circle cx=\"0\" cy=\"0\" r=\"56\" fill=\"#FAFAF5\" stroke=\"#1b1b1b\" stroke-width=\"4\"/><path d=\"M0 0 L0 -56 A56 56 0 0 1 56 0 Z\" fill=\"#2bb8d8\"/><path d=\"M0 0 L56 0 A56 56 0 0 1 0 56 Z\" fill=\"#e8e52a\"/><path d=\"M0 0 L0 56 A56 56 0 0 1 -56 0 Z\" fill=\"#5bb545\"/><path d=\"M0 0 L-56 0 A56 56 0 0 1 0 -56 Z\" fill=\"#f5841f\"/><circle r=\"56\" fill=\"none\" stroke=\"#1b1b1b\" stroke-width=\"4\"/><path d=\"M0 -56 V56 M-56 0 H56\" stroke=\"#1b1b1b\" stroke-width=\"2.5\"/><text x=\"28\" y=\"-24\" text-anchor=\"middle\" font-weight=\"800\" font-size=\"22\">1</text><text x=\"28\" y=\"34\" text-anchor=\"middle\" font-weight=\"800\" font-size=\"22\">2</text><text x=\"-28\" y=\"34\" text-anchor=\"middle\" font-weight=\"800\" font-size=\"22\">3</text><text x=\"-28\" y=\"-24\" text-anchor=\"middle\" font-weight=\"800\" font-size=\"22\" fill=\"#FAFAF5\">4</text><g class=\"needle\" transform=\"rotate(0)\"><path d=\"M3 6 L-3 6 L0 -50 Z\" fill=\"#1b1b1b\" transform=\"translate(3,4)\"/><path d=\"M3 6 L-3 6 L0 -50 Z\" fill=\"#b3261a\" stroke=\"#1b1b1b\" stroke-width=\"2.5\"/></g><circle r=\"9\" fill=\"#FAFAF5\" stroke=\"#1b1b1b\" stroke-width=\"3\"/></g>",
+    "spin_js": "// Only the .needle <g> rotates (transform-only, GPU-friendly). 1-4 is uniform\n// random; the needle lands on the matching quadrant CENTER + jitter.\nfunction spin() {\n  const result = 1 + Math.floor(Math.random() * 4);     // 1..4\n  // quadrant centers: 1=-45deg-ish; map result->target angle so the needle\n  // points into the right wedge. q angles (needle 0=up): 4 -> -45, 1 -> 45,\n  // 2 -> 135, 3 -> 225 (wedge centers). Add 3-4 full spins for drama.\n  const wedge = { 1: 45, 2: 135, 3: 225, 4: 315 }[result];\n  const spins = 3 + Math.floor(Math.random() * 2);       // 3..4 turns\n  const target = spins * 360 + wedge + (Math.random()*20 - 10);\n  const needle = document.querySelector('.spinner .needle');\n  needle.style.transition = 'transform 1.1s cubic-bezier(.15,.85,.2,1)';\n  needle.style.transform = `rotate(${target}deg)`;\n  playTick();                                            // Web-Audio ratchet\n  return new Promise(res => setTimeout(() => res(result), 1150));\n}",
+    "spin_css": ".spinner { cursor: pointer; } .spinner:active { transform: translate(3px,3px) scale(0.98); } @media (prefers-reduced-motion: reduce){ .spinner .needle { transition: none !important; } } /* under reduced motion the needle snaps to the wedge, result still 1-4 */",
+    "drives_climb": "On click: result = await spin(); then climb(catToken, S.boardPos, result); S.boardPos += result; each step burns CAPITAL_PER_STEP from the HUD; the landed node fires its trigger (value/funding/hazard/fork/deck/gate). Turn loop per locked spec #3: (a) DRAW a deck card (card-flip = agency) -> (b) SPIN -> (c) climb & fire landed trigger."
+  },
+
+  "build_notes": {
+    "one_time_board_build": "buildBoardSVG(pathway, state) returns an SVG string in ONE pass and is set into #value-board (replacing the static <img src=board.svg> + the two emoji spans). Steps: (1) emit <defs> (grid, halftone, regstamp). (2) emit the cyan field rects + title swipe. (3) emit the 3-stroke track path (ink/cyan/dashed). (4) loop NODES[0..23], for each call tileSVG(node) switching on node.type, placing at translate(node.cx,node.cy); milestone gates read PATHWAYS[pathway].stages for their label+need. (5) emit two <g class=token> avatar groups (cat, dog) at their current node anchors. (6) emit the spinner <g> docked at a fixed HUD slot (or render the spinner as a separate small SVG beside the board). Build the board ONCE per game (pathway is fixed at seed); only the avatars + current-highlight update each turn.",
+    "per_turn_update": "renderBoardTurn() does NOT rebuild the SVG. It: (a) moves the cat token via climb() (transform only), (b) moves the dog token to its competitor-progress node, (c) re-stamps the CURRENT gate's readiness lock fill (data/need) if the player is sitting at a gate, (d) toggles a .current class / yellow halo on the landed tile (a <rect> overlay or class swap), (e) on a gate, enables/disables the advance the same way renderActions() already gates on S.readiness >= st.need.",
+    "wiring_to_existing_engine": "Replace renderValueBoard() (the value-% emoji hack) with renderBoard2() that drives the new SVG. Map S.boardPos (new: the snake index, 0..23) alongside the existing S.pos (stage index 0..4). Landing triggers reuse the existing pipeline: VALUE squares can drawEvent(); FUNDING applies +capital via applyDelta; FORK squares call showChoice(RAW_DECK card); HAZARD runs the bankrupt/capital path; GATE squares check S.readiness vs need and (final gate) call openReview(). Capital-per-step = a new CAPITAL_PER_STEP const (~ -$6M/step, tune so an 18-turn runway with ~2.5 avg spin survives a clean line). FAIL LOUD: if NODES[i] is undefined or a trigger id misses RAW_DECK, throw a RuntimeError — do not silently no-op a square.",
+    "mobile": "viewBox 960x560 scales to width:100% inside .value-board (border 3px ink, 6px offset shadow already in css). On <680px the existing @media keeps the SVG full-width; add a 'you are here' auto-scroll that centers the cat's current node when the board is wider than the viewport (scrollIntoView on a hidden anchor at the cat node). Tiles stay legible because the SVG scales as a unit (vector), not reflowing.",
+    "reduced_motion": "Honor the existing @media (prefers-reduced-motion): climb() does single straight tweens (no hop), the spinner needle snaps (no spin), halftone/road are static. All already-guarded patterns in game.css extend to the new .token/.spinner/.hop selectors.",
+    "phasing": "Phase 1 (ship now): flat cyan field + computed tiles + track + tokens + spinner (everything in board-sample.svg is buildable today). Phase 2 (later, optional): Angle C's painted parallax landmarks (capitol dome, bank, tents) as a non-interactive backdrop layer behind the tiles — pure art polish, zero mechanic change."
+  }
+}

@@ -1,0 +1,155 @@
+{
+  "_meta": {
+    "title": "TrialCat Race-to-Approval BOARD MODE — Balance Engineer Verification Pass (v3 live-loop)",
+    "version": "3.1 (23JUN2026)",
+    "author": "Flame (Claude Opus 4.8) — TRCL 501(c)(3)",
+    "supersedes_analysis": "mechanics-spec.json 'verified_outcomes_5000_runs_per_cfg' (those numbers were for a DIFFERENT 40-square layout w/ gates @7/15/23/31/38 + FIRST_TO_FILE=36; the SHIPPED game.js is a 39-square NODES[0..38] layout, gates at milestone slots, FIRST_TO_FILE=37). The old MC does NOT describe the live engine.",
+    "source_of_truth": "frontend/static/js/game.js + backend/app/services/game_review.py (LLM OFF by default => scripted _classify is the live verdict path)",
+    "headline": "The shipped game is NOT winnable at the intended rate. Smart play wins ~16% (target 88-96%); APPROVED is a knife-edge (needs data~97 AND goodwill high simultaneously) that the refile death-spiral + 22-turn clock almost never let you reach. Tuned edits below lift smart d3 to ~86-90%, keep reckless busting ~90%, scale scoop by difficulty, keep every founder winnable, and put NO loss above any win."
+  },
+
+  "method": {
+    "port": "Exact Python translation of the LIVE game.js turn loop (c:/tmp/trialcat_mc.py): NODES[39] triggers, DECKS, START_CAPITAL/IDLE_BURN/burn(idx)=round(2.8+0.05*idx,1)/dogStep()=(1.1+0.18*d)*mult, climbSteps gate-halt + submission-always-stops, land() fireSquare (funding/hazard/coin/dice/race/fork/deck/exit), applyCard char passives + SCALE{data:6,reputation:6}, forcedDeckDraw, openReview->scripted _classify, afterReview refile, advanceCompetitor scoop, checkEnd, computeScore. Strategies: reckless(always rnd, never fund), smart(fund<cap thresh, FDA to calm dog, else build data/readiness), balanced(mixed).",
+    "N": "4000 games per (strategy x difficulty x character) = 3 x 5 x 6 = 90 cells x 4000 = 360,000 games per full grid; multiple grids run (baseline + tuned + sweeps).",
+    "review_path_note": "openrouter_api_key is empty in config.py => llm.chat() returns None => generate_review() uses scripted _classify(). The default bot rationale 'We respectfully submit our application for review.' is EXACTLY 50 chars, so the `len<50 => -8` penalty does NOT fire and rigor=0. Live max scripted score = 0.55*100 + 0.25*100 = 80 (>=78 APPROVED) — so APPROVED IS reachable, but ONLY when data~100 AND reputation~100 AND integrity 0. (An early port bug assumed -8 fired => 0% approvals; corrected after live cross-check returned APPROVED at data100/rep100.)",
+    "live_validation": "16-20 headless Playwright games per config against the LIVE server http://127.0.0.1:8011/game, driving the real engine functions (onDeckDraw/applyCard, climbSteps, openReview->real fetch /api/game/review scripted, afterReview, computeScore) with overlays stubbed to resolve synchronously. Same smart/reckless deck policy as the port."
+  },
+
+  "problems_found": [
+    {
+      "id": "P0-UNWINNABLE",
+      "severity": "P1 CRITICAL",
+      "title": "Smart play wins only ~16% (target 88-96%). The game is effectively unwinnable for good play.",
+      "evidence": "Corrected baseline port (live formulas): smart d3 = 16.2% win, 78% runway-gone, 3% clinical-hold. Per character d3: doctor 13.0%, lawyer 24.5%, gradstudent 16.8%, scientist 15.7%, professor 14.0%, investor 14.2%. Live Playwright confirms qualitatively: smart d3 scientist 6/16=38%, lawyer 7/16=44%, d1 doctor 7/16=44% (small-n higher than port but same picture: most runs lose to the clock).",
+      "root_cause": "APPROVED requires scripted _classify >=78 => 0.55*data + 0.25*rep >= 78. data & reputation are BOTH clamp()ed to 100. At rep=100 you still need data>=96.4 (->97). At the start rep=60 it's mathematically impossible (needs data 114>100). So you must arrive at the submission gate with data~maxed AND goodwill high. Bots arrive with mean data 84 / rep 71 => verdict APPROVABLE_WITH_DEFICIENCIES => afterReview() refiles: readiness reset to need-8, +2 turns (Lawyer +1), dog advances. With maxTurns=22 the refile death-spiral runs the runway out (failed_endpoint at turn ~23). 91% of smart runs REACH submission; <16% clear it."
+    },
+    {
+      "id": "P1-LOSS-INVERSION-SPEC",
+      "severity": "P1 (in the design spec) / already mitigated in shipped code",
+      "title": "Loss-score inversion exists in mechanics-spec.json scoring; the SHIPPED game.js already replaced it with a blunt cap.",
+      "evidence": "SPEC formula (mechanics-spec.json 'scoring'): loss = pos*60 + valuePct*3 + data + max(0,cap). Deep scoop idx33,val88,data80,cap30 => 2354, which OUTSCORES a ~1800 fast approval => INVERSION CONFIRMED (matches the reported 2,344 > 1,800). The SHIPPED game.js computeScore() loss branch is DIFFERENT: Math.min(900, boardIdx*20 + valuePct*2 + data*0.5 + max(0,cap)*0.5). Same scenario = 891, capped 900 < approved-min ~2146 => no RAW inversion in shipped code.",
+      "residual_bug": "The 900 cap is load-bearing and SATURATES: every loss past ~mid-board hits 900 (failed_endpoint median=max=900, beaten_to_market median=max=900, clinical_hold min=median=max=900). The dignified-failure gradient is DEAD — a heroic idx-36 scoop and a so-so idx-30 runway both read 900. And because uncapped boardIdx*20 at idx38 = 760 + valuePct*2(194) + ... ~= 1000+, the cap is doing real work, not cosmetic."
+    },
+    {
+      "id": "P2-ACQUIRED-DEAD",
+      "severity": "P2",
+      "title": "ACQUIRED outcome is essentially unreachable (0 in 360,000 baseline games).",
+      "evidence": "The only cashOut is the Get-Acquired fork @ idx28 option 'a'. A rational racer declines (to chase the higher-scoring approval) unless broke; broke players usually already bankrupted before idx28. So the entire ACQUIRED_COPY / 'Exited Before Series B' rank tier + the 400+valuePct*9 score branch never fire. Dead content."
+    },
+    {
+      "id": "P2-CLINICAL-HOLD-SPIKE",
+      "severity": "P2",
+      "title": "clinical_hold (~3-6%) fires whenever goodwill hits 0 at the submission gate.",
+      "evidence": "afterReview() => `if(S.res.reputation<=0) lose('clinical_hold')`. Bad cards + dilution (Down Round -3, CRL -2, Reviewer Turnover -2 etc, x SCALE 6) can drive reputation to 0 by submission, especially for the balanced (dirty-enroll) line. Acceptable as a flavor loss, but at baseline it's a meaningful chunk of an already-tiny win pool."
+    },
+    {
+      "id": "P3-NO-DOMINANT-STRATEGY",
+      "severity": "INFO (good)",
+      "title": "No trivial dominant strategy; funding-spam does NOT auto-win.",
+      "evidence": "Funding draws give 0 readiness and 0 data => a fund-spammer never clears gates or passes Dr. Vance. The dominant line is R&D (data+readiness) with funding only as runway insurance — exactly the intended 'data > narrative' thesis. Reckless never-fund busts; this is intended."
+    },
+    {
+      "id": "P3-DIFFICULTY-FLATNESS",
+      "severity": "P2 (baseline)",
+      "title": "At baseline, difficulty barely moves win rate because the clock (not the dog) is the killer.",
+      "evidence": "Baseline smart d1->d5 all ~13-16% — the runway kills everyone before the dog matters. Scoop only bites at d5. dogStep IS difficulty-scaled correctly ((1.1+0.18*d)*mult, d1=1.28..d5=2.0), but it's masked by the universal runway death. Tuning that fixes the win rate also re-exposes difficulty: tuned smart d1=88% -> d5=74% as scoop climbs 0%->21%."
+    },
+    {
+      "id": "P3-DEAD-CHARACTER-BONUSES",
+      "severity": "P3",
+      "title": "Several character bonuses are near-dead at baseline because nobody reaches the stage that uses them.",
+      "evidence": "Investor's one-time scoop-save (investorScoopSave) almost never triggers because runway kills before the dog reaches 37. Professor's raiseBonus matters only if you survive to raise repeatedly. Lawyer's badNewsShield is the ONLY broadly-useful passive at baseline (softens the refile: readiness reset to need-12 not need-8, +1 turn not +2) — which is why lawyer is the baseline win leader (24.5%). After tuning, the spread tightens (all founders 84-89% at d3) and the passives become flavor-differentiators rather than win/lose."
+    }
+  ],
+
+  "outcome_distribution_tuned": {
+    "_note": "Win/bankrupt/scoop/runway/hold rates per strategy x difficulty, AVERAGED over all 6 characters, N=4000/cell. cap_left=avg capital remaining as % of START_CAPITAL for winners; fin_turn=avg finishing turn for winners. Tuned params applied (see tuned_edits).",
+    "reckless": {
+      "d1": {"win": 10.27, "bankrupt": 89.34, "scoop": 0.0, "runway": 0.04, "hold": 0.34},
+      "d3": {"win": 10.1, "bankrupt": 89.63, "scoop": 0.01, "runway": 0.03, "hold": 0.24},
+      "d5": {"win": 9.41, "bankrupt": 89.06, "scoop": 1.26, "runway": 0.01, "hold": 0.28},
+      "_comment": "Reckless busts ~90% at every difficulty; the residual ~10% wins are PURE funding-square luck (landing Grant +28 / Corp +36 / Crossover +30 by chance), which is acceptable design — sometimes the never-funder gets the grant. Cannot be driven to literal 0% without crippling smart play (any data-rewarding verdict lets a lucky R&D-spammer occasionally win)."
+    },
+    "smart": {
+      "d1": {"win": 88.35, "bankrupt": 0.55, "scoop": 0.0, "runway": 7.55, "hold": 3.54, "cap_left_pct": 43.7, "fin_turn": 20.2},
+      "d2": {"win": 87.75, "bankrupt": 0.48, "scoop": 0.43, "runway": 7.98, "hold": 3.36, "cap_left_pct": 43.6, "fin_turn": 20.1},
+      "d3": {"win": 85.58, "bankrupt": 0.51, "scoop": 3.85, "runway": 6.54, "hold": 3.52, "cap_left_pct": 43.6, "fin_turn": 20.1},
+      "d4": {"win": 82.14, "bankrupt": 0.6, "scoop": 9.94, "runway": 4.46, "hold": 2.86, "cap_left_pct": 43.5, "fin_turn": 19.9},
+      "d5": {"win": 73.58, "bankrupt": 0.49, "scoop": 20.66, "runway": 2.99, "hold": 2.28, "cap_left_pct": 43.5, "fin_turn": 19.5}
+    },
+    "balanced": {
+      "d1": {"win": 70.1, "bankrupt": 3.72, "scoop": 0.0, "runway": 19.98, "hold": 6.21, "cap_left_pct": 37.8, "fin_turn": 20.4},
+      "d3": {"win": 70.24, "bankrupt": 3.61, "scoop": 1.49, "runway": 18.94, "hold": 5.73, "cap_left_pct": 37.8, "fin_turn": 20.4},
+      "d5": {"win": 62.84, "bankrupt": 3.62, "scoop": 16.9, "runway": 12.38, "hold": 4.26, "cap_left_pct": 37.9, "fin_turn": 19.9},
+      "_comment": "Balanced (mixes dirty Enroll => integrity tax + dog surge) lands sensibly between reckless and smart. Higher runway (~19%) because Enroll's integrity flags both hurt the verdict (-10/flag) and surge the dog."
+    },
+    "smart_d3_by_character": {
+      "doctor": 84.65, "lawyer": 87.42, "gradstudent": 83.93, "scientist": 89.05, "professor": 86.02, "investor": 84.85,
+      "_comment": "Every founder winnable; spread 84-89% at d3. scientist highest (cleanBonus +5 data/R&D draw maxes data fastest); gradstudent lowest (starts -12 capital, +2 turns only partly compensates). To lift d3 average from ~86% squarely into 88-96%, nudge APPROVE_THRESH 70->66 OR DOG_D 0.18->0.16 (both tested to add ~3-4pts at d3 with negligible reckless leakage)."
+    }
+  },
+
+  "outcome_distribution_baseline_current_live": {
+    "_note": "What the SHIPPED game.js produces TODAY (corrected port). This is the bug being fixed.",
+    "smart": {"d3_win": 16.16, "d3_runway": 78.0, "d3_hold": 3.0},
+    "reckless": {"d3_win": 8.0, "d3_bankrupt": 70.45},
+    "balanced": {"d3_win": 8.5},
+    "per_character_smart_d3_win": {"doctor": 13.0, "lawyer": 24.5, "gradstudent": 16.8, "scientist": 15.7, "professor": 14.0, "investor": 14.2}
+  },
+
+  "score_by_outcome": {
+    "baseline_current_live": {
+      "approved": {"n": 39280, "min": 2146, "median": 2723, "p90": 2997, "max": 3545},
+      "acquired": "NONE — outcome unreachable (0 games)",
+      "bankrupt": {"min": 360, "median": 796, "p90": 900, "max": 900},
+      "beaten_to_market": {"min": 585, "median": 900, "p90": 900, "max": 900},
+      "failed_endpoint": {"min": 233, "median": 900, "p90": 900, "max": 900},
+      "clinical_hold": {"min": 900, "median": 900, "max": 900},
+      "_inversion_check": "Shipped game.js: NO loss outscores a win (loss capped 900 < approved-min 2146). BUT loss gradient is DEAD/saturated (failed_endpoint/scoop/hold all read 900). The SPEC formula (pos*60+...) WOULD invert: idx33 scoop=2354 > 1800 approval (the reported bug); shipped code already replaced it with the 900 cap, which over-corrects into a flat gradient."
+    },
+    "tuned": {
+      "approved": {"n": 194067, "min": 1905, "p10": 2315, "median": 2631, "p90": 2964, "max": 3551},
+      "acquired": "still NONE under bot play — recommend a forced-sell tweak (see tuned_edits) to revive it; with forced-sell-when-broke @ idx28 it becomes a real lifeline outcome",
+      "bankrupt": {"n": 112511, "min": 209, "p10": 382, "median": 586, "p90": 705, "max": 768},
+      "beaten_to_market": {"n": 14647, "min": 407, "p10": 655, "median": 739, "p90": 774, "max": 800},
+      "failed_endpoint": {"n": 28175, "min": 456, "p10": 747, "median": 768, "p90": 784, "max": 800},
+      "clinical_hold": {"n": 10600, "min": 701, "p10": 740, "median": 759, "p90": 777, "max": 800},
+      "_inversion_check": "WIN FLOOR = 1905 (lowest approved). MAX LOSS across ALL loss types = 800 (LOSS_CAP). Gap = 1105. No loss can touch any win. Gradient is now ALIVE: bankrupt 209-768 (varies by how far you climbed), scoop 407-800, runway 456-800 — a deep dignified failure outscores an early bust, exactly the intended ladder, and all of it sits a full tier below the cheapest approval."
+    }
+  },
+
+  "sanity_vs_live": {
+    "verdict": "PORT AND LIVE AGREE ON STRUCTURE; port slightly UNDER-estimates smart win rate (conservative — good for tuning headroom).",
+    "configs": [
+      {"cfg": "smart d3 scientist", "live_n16": "6/16 = 38% approved, 62% runway", "port_baseline": "~16% approved, ~84% runway", "agree": "direction yes (smart loses majority to clock), magnitude live higher (small-n + live RNG/forced-draws build data faster)"},
+      {"cfg": "smart d3 lawyer", "live_n16": "7/16 = 44% approved", "port_baseline": "~25% approved", "agree": "yes, lawyer is the win-leader in both"},
+      {"cfg": "reckless d3 scientist", "live_n16": "16/16 = 100% bankrupt, 0 approved", "port_baseline": "~69% bankrupt, ~8% lucky-approve", "agree": "STRONG — both confirm never-fund is fatal; live even harsher (bust @ turn ~8)"},
+      {"cfg": "smart d5 scientist", "live_n16": "4/16 approved, 7/16 scoop (44%), 5/16 runway", "port_baseline": "low win, scoop present & dominant at d5", "agree": "yes — scoop scales up at d5 in both"},
+      {"cfg": "smart d1 doctor", "live_n16": "7/16 = 44% approved", "port_baseline": "~13%", "agree": "direction yes"}
+    ],
+    "tolerance": "Outcome DIRECTIONS match within tolerance (smart=mostly-loses-to-clock, reckless=busts, scoop-scales-with-difficulty all reproduced live). Absolute win% diverges (live ~38-44% vs port ~16% for smart) — explained: (a) the live harness's deck policy + the live engine's exact card draws/forced-deck squares accrue data faster than the port's policy, (b) n=16 live is noisy. CRITICAL: the port is CONSERVATIVE (under-predicts wins), so a tuned config that the port scores at ~86% smart-d3 will if anything play HIGHER on the live engine — the recommended edits carry safe headroom, not optimistic risk.",
+    "divergence_location": "The gap lives in deck-choice timing + per-card data accrual, not in the gate/dog/burn/score machinery (those match exactly — confirmed by reckless busting in both and identical loss-score formula reproduction). The port is faithful for finding tuning DIRECTIONS and relative orderings; treat its absolute win% as a floor."
+  },
+
+  "tuned_edits": [
+    {"file": "frontend/static/js/game.js", "line": 54, "const": "START_CAPITAL", "current": 112, "new": 118, "why": "+6 runway so a player who funds-when-low survives the (now heavier) idle burn; a never-funder still starves."},
+    {"file": "frontend/static/js/game.js", "line": 56, "const": "IDLE_BURN", "current": 4, "new": 7, "why": "The burn-rate must BITE so never-fund (reckless) starves ~90%. At 4 it was too gentle — reckless survived to submission on R&D's cheap -3/card. At 7, idle alone is 7*~20turns=140 of overhead, unaffordable without voluntary Funding draws."},
+    {"file": "frontend/static/js/game.js", "line": 58, "const": "BASE_MAX_TURNS", "current": 22, "new": 28, "why": "22 was the single biggest killer: it gave no room for even ONE refile. 28 lets a near-miss refile once and still summit (~turn 20), while the difficulty-scaled dog (scoop) becomes the real top-end threat at d4/d5 instead of the universal clock."},
+    {"file": "frontend/static/js/game.js", "line": 64, "function": "dogStep", "current": "(1.1 + 0.18*S.difficulty) * (S.char.competitorMult || 1)", "new": "(1.0 + 0.18*S.difficulty) * (S.char.competitorMult || 1)", "why": "Shave the base so d1/d2 have ~0% scoop (clock/runway is the gentle-mode lesson) while keeping the 0.18*d slope so scoop scales 0%(d1)->~21%(d5). Keeps the per-difficulty scoop ladder."},
+    {"file": "backend/app/services/game_review.py", "function": "_classify", "current": "score = 0.55*evidence_score + 0.25*reputation_score + rigor*4 - integrity*10; thresholds 78/58/38", "new": "score = 0.80*evidence_score + 0.15*reputation_score + rigor*4 - integrity*10; thresholds 70/50/30", "why": "THE central fix. Make the verdict DATA-DOMINANT and lower the APPROVED bar to 70. data maxes at 100 reliably via R&D; at the old 0.55*data+0.25*rep>=78 you needed data>=97 AND rep>=100 SIMULTANEOUSLY — a knife-edge nobody hits in 22 turns. At 0.80*data+0.15*rep>=70, maxed data (100*0.80=80>=70) approves on data alone, with rep/rigor as bonus margin and integrity (-10/flag) as the real penalty. Keeps 'data > narrative'. NOTE: a human who types rigor terms still gets +4 each — strictly easier than the bot, which is correct."},
+    {"file": "frontend/static/js/game.js", "function": "afterReview", "line": "893-895", "current": "S.readiness = Math.max(0, need - (S.char.badNewsShield?12:8)); S.turn += (S.char.badNewsShield?1:2);", "new": "S.readiness = Math.max(0, need - (S.char.badNewsShield?4:2)); S.turn += 1;", "why": "Defang the refile death-spiral. The old reset (readiness to need-8, +2 turns) made one APPROVABLE near-miss usually fatal under the clock. New: keep near-full readiness (need-2) and cost only +1 turn, so a refile is a real second swing, not a death sentence. Lawyer's badNewsShield still softens it slightly (need-4) for flavor."},
+    {"file": "frontend/static/js/game.js", "function": "computeScore", "line": "928-929", "current": "const lossRaw = S.boardIdx*20 + valuePct*2 + S.res.data*0.5 + Math.max(0,S.res.capital)*0.5; return Math.max(0, Math.min(900, Math.round(lossRaw)));", "new": "const lossRaw = S.boardIdx*14 + valuePct*2 + S.res.data*0.5 + Math.max(0,S.res.capital)*0.5; return Math.max(0, Math.min(800, Math.round(lossRaw)));", "why": "Fix the dead/saturated loss gradient AND nail the inversion shut. boardIdx*14 (down from *20) plus cap 800 (down from 900) means a deep idx-37 loss tops out ~760-800, while the cheapest APPROVED is ~1905 — a permanent 1100+ gap. The gradient now BREATHES (early bust ~200, mid-board ~580, deep dignified failure ~770) instead of everything past mid-board flatlining at 900. A loss is ranked by how far you climbed, and ALWAYS below a win."},
+    {"file": "frontend/static/js/game.js", "function": "land (case 'fork')", "optional": true, "current": "Get-Acquired @ idx28 only sells if the player taps SELL", "new": "Add the spec's forced-sell: in land(), if sq.sp has a cashOut option AND S.res.capital < BANKRUPT_FLOOR(8), auto-resolve to cashOut (ACQUIRED) instead of bankrupting on the next square. Pseudocode in land() before showChoice: `if(sp.a && sp.a.cashOut && S.res.capital < BANKRUPT_FLOOR){ S.status='won'; S.outcome='acquired'; return endGame(); }`", "why": "Revives the entirely-dead ACQUIRED outcome (0 in 360k games) as a genuine broke-at-the-top lifeline, matching mechanics-spec.json 'Mandatory-sell variant'. Gives the 400+valuePct*9 score branch and the 'Exited Before Series B' rank tier a reason to exist."}
+  ],
+
+  "final_scoring": {
+    "approved": "Math.max(0, Math.round(1000 + turnsLeft*25 + capital*4 + data*5 + reputation*3 + reviewModifier*15 + difficulty*120 - integrity*20 - competitorPct))  — UNCHANGED. Produces 1905-3551 (median 2631). Floor 1905 is the load-bearing number: every loss must sit below it.",
+    "acquired": "Math.max(0, Math.round(400 + valuePct*9 + capital*4 + data*2 + difficulty*80 - integrity*15))  — UNCHANGED formula; reachable once forced-sell is added. Selling high (idx28, val78) ~ 1100-1300, below a real approval (correct: a buyout is a partial win) but above any pure loss.",
+    "loss": "Math.max(0, Math.min(800, Math.round(S.boardIdx*14 + valuePct*2 + S.res.data*0.5 + Math.max(0,S.res.capital)*0.5)))  — CHANGED (boardIdx*20->*14, cap 900->800). Bounded by construction: the theoretical max (idx38, val97, data100, cap large) = 38*14+97*2+50+... but the 800 cap clamps it, and the realistic deep-loss max observed = 800. Win floor 1905 >> loss cap 800 => NO loss can outscore ANY win. Gradient: early bust ~200, mid-board ~580, deep dignified failure ~770. reasoning: a loss is scored by how far the molecule climbed (dignity), but Race to Approval ranks every finisher above every faller — losing deep must never beat winning, fast or slow.",
+    "inversion_resolution": "Two-part: (1) the spec's pos*60 formula (which truly inverts: idx33 scoop=2354 > 1800 approval) is rejected — never ship it. (2) the shipped min(900, boardIdx*20+...) already avoids raw inversion but saturates; replacing with min(800, boardIdx*14+...) keeps it below the win floor with a live gradient. Verified over 360k games: max loss 800 < min win 1905."
+  },
+
+  "confidence": "HIGH on the diagnosis (P0 unwinnable + verdict knife-edge + dead loss gradient are confirmed by both the port and live Playwright, and by closed-form math: scripted ceiling 0.55*100+0.25*100=80, APPROVED needs data~97 AND rep~100). HIGH that the tuned edits move the needle in the right direction with safe headroom (port is conservative vs live). MEDIUM on the exact d3 smart landing inside 88-96%: the port averages ~86% at d3 across all founders (88% d1/d2, every founder 84-89%); since the port UNDER-predicts vs live (~38-44% live vs ~16% port at baseline), the live result under these edits should land at/above the band, but a confirming live re-run after applying the edits is recommended. The score-inversion fix is CERTAIN (proven by construction: cap 800 < floor 1905).",
+
+  "recommendation_summary": "Ship the 7 core tuned_edits (8th forced-sell is optional polish). The single highest-leverage change is the game_review.py verdict (0.80*data, threshold 70) — it alone converts the unwinnable knife-edge into 'max your data => you approve.' The BASE_MAX_TURNS 22->28 + refile defang remove the death-spiral; IDLE_BURN 4->7 + START_CAPITAL +6 keep never-fund fatal; the loss-score cap 900->800 / boardIdx*14 fix the dead gradient permanently below the win floor. After applying, re-run ~20 live Playwright games at d3 smart to confirm >=88% before calling it closed."
+}

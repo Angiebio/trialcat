@@ -1,0 +1,671 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "date": "16JUN2026",
+    "title": "TrialCat — Race to Approval — BOARD MODE squares spec (FINAL)",
+    "viewBox": "810.16 x 320.98",
+    "value_bands_real": ["$100k","$1M","$5M","$25M","$90M","$300M","$900M","$2.5B","$5B","$9B"],
+    "value_band_thresholds": {"$100k":0,"$1M":8,"$5M":16,"$25M":26,"$90M":38,"$300M":50,"$900M":64,"$2.5B":78,"$5B":90,"$9B":97},
+    "burn_per_square": 6,
+    "spinner": [1,2,3,4],
+    "notes_pointer": "see top-level notes for full engine-wiring spec"
+  },
+  "squares": [
+    {
+      "index": 0,
+      "type": "start",
+      "label": "START",
+      "flavor": "A slide deck, a dream, and a bank balance that rounds to zero. Dr. Vance has seen ten thousand of you. Climb the snake. Don't run out of money.",
+      "value_band": "$100k",
+      "value_pct": 0,
+      "milestone_slot": -1,
+      "canon": true,
+      "trigger": { "special": { "type": "none" } }
+    },
+    {
+      "index": 1,
+      "type": "value",
+      "label": "$1M",
+      "flavor": "You incorporated in Delaware and bought a freezer. The freezer is already 40% of your runway.",
+      "value_band": "$1M",
+      "value_pct": 8,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": 0, "d": 1, "r": 0, "v": 0, "special": { "type": "value" } }
+    },
+    {
+      "index": 2,
+      "type": "milestone",
+      "label": "Pre-IND Gate",
+      "flavor": "You ask FDA if your plan is insane before spending the money. They answer in writing. You will reread that letter like a breakup text.",
+      "value_band": "$5M",
+      "value_pct": 16,
+      "milestone_slot": 0,
+      "canon": false,
+      "trigger": { "special": { "type": "gate", "need_slot": 0 } }
+    },
+    {
+      "index": 3,
+      "type": "funding",
+      "label": "Grant Funding!",
+      "flavor": "Non-dilutive money, the rarest creature in biotech. Nobody took equity, nobody gets a board seat, and you keep your soul one more quarter.",
+      "value_band": "$5M",
+      "value_pct": 18,
+      "milestone_slot": -1,
+      "canon": true,
+      "trigger": { "c": 4, "d": 0, "r": 0, "v": 0, "special": { "type": "funding" } }
+    },
+    {
+      "index": 4,
+      "type": "value",
+      "label": "$10M",
+      "flavor": "A KOL returned your email. You read it nine times looking for hidden enthusiasm. There is none, but there is also no 'no.'",
+      "value_band": "$5M",
+      "value_pct": 22,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": 0, "d": 1, "r": 1, "v": 0, "special": { "type": "value" } }
+    },
+    {
+      "index": 5,
+      "type": "deck",
+      "label": "Draw New Staff",
+      "flavor": "You hired a regulatory lead who has actually received a CRL and lived. Worth more than the Series A.",
+      "value_band": "$25M",
+      "value_pct": 26,
+      "milestone_slot": -1,
+      "canon": true,
+      "trigger": { "r": 2, "d": 1, "special": { "type": "deck", "deck": "rnd", "count": 1, "label": "+1 staff" } }
+    },
+    {
+      "index": 6,
+      "type": "funding",
+      "label": "Corp. Venture Funds!",
+      "flavor": "A strategic wrote a check and asked for 'just a small information right.' It is never small. The war chest is fat today.",
+      "value_band": "$25M",
+      "value_pct": 27,
+      "milestone_slot": -1,
+      "canon": true,
+      "trigger": { "c": 5, "d": 0, "r": 0, "v": 0, "special": { "type": "funding" } }
+    },
+    {
+      "index": 7,
+      "type": "milestone",
+      "label": "Phase 1 Gate",
+      "flavor": "First in humans. Not looking for it to work yet, just to not hurt anyone — a low bar your drug will still try to limbo under.",
+      "value_band": "$25M",
+      "value_pct": 30,
+      "milestone_slot": 1,
+      "canon": false,
+      "trigger": { "special": { "type": "gate", "need_slot": 1 } }
+    },
+    {
+      "index": 8,
+      "type": "deck",
+      "label": "Draw +1 Staff & +1 REG",
+      "flavor": "Pull two off the board: a hire and a regulatory card. The painted square always made you draw twice. The deck remembers.",
+      "value_band": "$25M",
+      "value_pct": 33,
+      "milestone_slot": -1,
+      "canon": true,
+      "trigger": { "r": 1, "d": 1, "special": { "type": "deck", "deck": "rnd", "count": 1, "alsoReg": true, "label": "+1 staff & +1 REG" } }
+    },
+    {
+      "index": 9,
+      "type": "deck",
+      "label": "Draw: R&D 🔬",
+      "flavor": "Lab work by the book. The board makes you pull from the R&D deck — data that survives review is built, not bought.",
+      "value_band": "$90M",
+      "value_pct": 38,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "special": { "type": "deck", "deck": "rnd", "count": 1 } }
+    },
+    {
+      "index": 10,
+      "type": "fork",
+      "label": "Hire CRO?",
+      "flavor": "Outsource the trial to professionals who run 40 studies at once and will remember your name 60% of the time. Faster enrollment, faster burn.",
+      "value_band": "$90M",
+      "value_pct": 39,
+      "milestone_slot": -1,
+      "canon": true,
+      "trigger": {
+        "special": {
+          "type": "fork",
+          "a": { "label": "Hire the CRO", "c": -3, "d": 3 },
+          "b": { "label": "Run it in-house", "d": 1, "r": 1 }
+        }
+      }
+    },
+    {
+      "index": 11,
+      "type": "hazard",
+      "label": "Enrollment Shortfall",
+      "flavor": "Your sites enrolled 11% of target in 60% of the timeline. The CRO has 'learnings.' You have a burn rate and a board meeting Thursday.",
+      "value_band": "$90M",
+      "value_pct": 41,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": -2, "d": -2, "r": -1, "v": -2, "special": { "type": "hazard" } }
+    },
+    {
+      "index": 12,
+      "type": "value",
+      "label": "$70M",
+      "flavor": "Enrollment ahead of schedule, which has never once happened in recorded history. It is not real.",
+      "value_band": "$90M",
+      "value_pct": 43,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": -1, "d": 2, "r": 0, "v": 1, "special": { "type": "value" } }
+    },
+    {
+      "index": 13,
+      "type": "deck",
+      "label": "Draw: Enroll 🧪",
+      "flavor": "Open the sites, bring patients in. The board makes you pull from the Enroll deck — faster progress, messier data. Dr. Vance keeps a ledger.",
+      "value_band": "$90M",
+      "value_pct": 45,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "special": { "type": "deck", "deck": "enroll", "count": 1 } }
+    },
+    {
+      "index": 14,
+      "type": "milestone",
+      "label": "Phase 2 Gate",
+      "flavor": "Does it actually do anything? ~70% of programs die here. The valley of death has excellent parking.",
+      "value_band": "$90M",
+      "value_pct": 48,
+      "milestone_slot": 2,
+      "canon": false,
+      "trigger": { "special": { "type": "gate", "need_slot": 2 } }
+    },
+    {
+      "index": 15,
+      "type": "value",
+      "label": "$100M",
+      "flavor": "Your stock pops 40% on a press release with 'statistically significant' and 'well-tolerated.' Nobody read the secondary endpoints. Don't tell them.",
+      "value_band": "$300M",
+      "value_pct": 50,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": 3, "d": 1, "r": 0, "v": 2, "special": { "type": "value" } }
+    },
+    {
+      "index": 16,
+      "type": "hazard",
+      "label": "You're Out of Money!",
+      "flavor": "The science was sound — it almost always is. But the trial runs on capital, not hypotheses. Land here flat broke and the molecule goes back in the freezer. The mice are unmoved.",
+      "value_band": "$300M",
+      "value_pct": 52,
+      "milestone_slot": -1,
+      "canon": true,
+      "trigger": { "c": -4, "d": 0, "r": 0, "v": 0, "special": { "type": "hazard", "bankruptIfBroke": true } }
+    },
+    {
+      "index": 17,
+      "type": "deck",
+      "label": "Draw: FDA 🏛️",
+      "flavor": "Request a meeting with the agency to align on your plan. The board makes you pull from the FDA deck — costs money and time, buys goodwill and a clearer path.",
+      "value_band": "$300M",
+      "value_pct": 54,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "special": { "type": "deck", "deck": "fda", "count": 1 } }
+    },
+    {
+      "index": 18,
+      "type": "hazard",
+      "label": "Form 483 Issued",
+      "flavor": "An inspector found 'objectionable conditions' at your site. You have 15 business days to write a response longer than the inspection itself, and to mean it.",
+      "value_band": "$300M",
+      "value_pct": 56,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": -2, "d": 0, "r": -2, "v": -1, "special": { "type": "hazard" } }
+    },
+    {
+      "index": 19,
+      "type": "dice",
+      "label": "Advisory Committee",
+      "flavor": "The AdComm convenes. The panel votes on your benefit-risk, live, in public, while you sit in the front row not allowed to talk. Roll the room.",
+      "value_band": "$300M",
+      "value_pct": 58,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": {
+        "c": -1,
+        "special": {
+          "type": "dice",
+          "check": { "r": 4, "v": 3 },
+          "x": { "r": -3, "v": -3, "skip": true },
+          "bang": { "r": -1 },
+          "at": { "d": 1, "v": 1 }
+        }
+      }
+    },
+    {
+      "index": 20,
+      "type": "value",
+      "label": "$400M",
+      "flavor": "FDA accepts your external control arm built from registry data. The 1990s called and could not believe it. Frame this square.",
+      "value_band": "$300M",
+      "value_pct": 60,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": 1, "d": 2, "r": 1, "v": 1, "special": { "type": "value" } }
+    },
+    {
+      "index": 21,
+      "type": "fork",
+      "label": "Fire the CRO?",
+      "flavor": "The board has thoughts about leadership 'after the CRL,' and somewhere in the minutes 'CRO' became 'CEO.' Bring in a turnaround chief (cash, fresh credibility) or keep the founder (vision, baggage). The board cannot keep its C-suite straight either.",
+      "value_band": "$300M",
+      "value_pct": 62,
+      "milestone_slot": -1,
+      "canon": true,
+      "trigger": {
+        "special": {
+          "type": "fork",
+          "a": { "label": "Bring in new chief", "c": 3, "r": 2, "v": -1 },
+          "b": { "label": "Keep the founder", "r": -1, "v": 2 }
+        }
+      }
+    },
+    {
+      "index": 22,
+      "type": "milestone",
+      "label": "Phase 3 Gate",
+      "flavor": "The big, expensive, registrational trial. Hundreds of millions riding on a p-value you do not control.",
+      "value_band": "$900M",
+      "value_pct": 64,
+      "milestone_slot": 3,
+      "canon": false,
+      "trigger": { "special": { "type": "gate", "need_slot": 3, "deviceFork": true } }
+    },
+    {
+      "index": 23,
+      "type": "value",
+      "label": "$1B",
+      "flavor": "The field's most-cited investigator called your mechanism 'genuinely interesting' from the podium. Your competitor hears their valuation deflating.",
+      "value_band": "$900M",
+      "value_pct": 66,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": 2, "d": 0, "r": 3, "v": 1, "special": { "type": "value" } }
+    },
+    {
+      "index": 24,
+      "type": "coin",
+      "label": "Boot-strap It!",
+      "flavor": "Out of runway, you boot-strap the next milestone on grant funding and sheer will. Heroic if it works, a Chapter 7 filing if it doesn't.",
+      "value_band": "$900M",
+      "value_pct": 68,
+      "milestone_slot": -1,
+      "canon": true,
+      "trigger": {
+        "c": -1,
+        "special": {
+          "type": "coin",
+          "heads": { "c": 4, "r": 2 },
+          "tails": { "c": -2, "v": -2 }
+        }
+      }
+    },
+    {
+      "index": 25,
+      "type": "deck",
+      "label": "Draw: Funding 💵",
+      "flavor": "Sell equity, smile at the board, promise the moon. The board makes you pull from the Funding deck to refill the war chest before the expensive part.",
+      "value_band": "$900M",
+      "value_pct": 70,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "special": { "type": "deck", "deck": "funding", "count": 1 } }
+    },
+    {
+      "index": 26,
+      "type": "hazard",
+      "label": "Down Round",
+      "flavor": "Ms. N. Vested, MBA leads a financing at half your last valuation 'to be supportive.' Your option pool is now a rounding error. She still wants a board seat.",
+      "value_band": "$900M",
+      "value_pct": 72,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": 3, "d": 0, "r": -2, "v": -3, "special": { "type": "hazard" } }
+    },
+    {
+      "index": 27,
+      "type": "value",
+      "label": "$1.5B",
+      "flavor": "Strong Phase 3 readout. The primary endpoint held. Somewhere a biostatistician exhales for the first time since 2023.",
+      "value_band": "$900M",
+      "value_pct": 75,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": 3, "d": 2, "r": 0, "v": 3, "special": { "type": "value" } }
+    },
+    {
+      "index": 28,
+      "type": "fork",
+      "label": "Get Acquired?",
+      "flavor": "A strategic offers to buy you at a premium. Cash out and end the game a winner, or decline and gamble that the top of the track is real.",
+      "value_band": "$2.5B",
+      "value_pct": 78,
+      "milestone_slot": -1,
+      "canon": true,
+      "trigger": {
+        "special": {
+          "type": "fork",
+          "a": { "label": "SELL! 💰", "cashOut": true },
+          "b": { "label": "No thanks!", "v": 1 }
+        }
+      }
+    },
+    {
+      "index": 29,
+      "type": "race",
+      "label": "Surprise Competitor",
+      "flavor": "A rival you forgot existed just filed in your indication. If they read out first, you're second-to-market with a press release nobody reprints. Unless you sprint.",
+      "value_band": "$2.5B",
+      "value_pct": 80,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": {
+        "r": -1,
+        "special": {
+          "type": "race",
+          "ahead": { "v": 2 },
+          "behind": { "v": -3, "r": -1 }
+        }
+      }
+    },
+    {
+      "index": 30,
+      "type": "hazard",
+      "label": "Government Shutdown",
+      "flavor": "FDA's user-fee work continues but new meetings freeze. Your PDUFA clock is fine; your sanity is not. Congress will fix this in 34 days, plus a fiscal cliff.",
+      "value_band": "$2.5B",
+      "value_pct": 82,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": -1, "d": 0, "r": 0, "v": -1, "special": { "type": "hazard", "skip": true } }
+    },
+    {
+      "index": 31,
+      "type": "value",
+      "label": "$3B",
+      "flavor": "Priority Review Voucher in hand. Use it, or sell it for ~$100M to a company that wants to rush a wrinkle cream. Capitalism!",
+      "value_band": "$2.5B",
+      "value_pct": 84,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": 5, "d": 0, "r": 0, "v": 2, "special": { "type": "value" } }
+    },
+    {
+      "index": 32,
+      "type": "hazard",
+      "label": "CMC / Mfg Failure",
+      "flavor": "Three consecutive batches fail dissolution spec. Your process is 'not yet validated,' a kind phrase for 'a science experiment with a PDUFA date.'",
+      "value_band": "$2.5B",
+      "value_pct": 86,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": -3, "d": -1, "r": -1, "v": -2, "special": { "type": "hazard" } }
+    },
+    {
+      "index": 33,
+      "type": "deck",
+      "label": "Draw: FDA 🏛️",
+      "flavor": "One last alignment meeting before you file. Pull from the FDA deck — goodwill now is worth a re-review avoided later.",
+      "value_band": "$2.5B",
+      "value_pct": 88,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "special": { "type": "deck", "deck": "fda", "count": 1 } }
+    },
+    {
+      "index": 34,
+      "type": "hazard",
+      "label": "Refuse-to-File",
+      "flavor": "FDA won't even REVIEW your application. The 74-day letter lands like a slap with a federal seal. Your filing fee is non-refundable. So is your dignity.",
+      "value_band": "$5B",
+      "value_pct": 90,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": -3, "d": -1, "r": -3, "v": -3, "special": { "type": "hazard", "skip": true } }
+    },
+    {
+      "index": 35,
+      "type": "funding",
+      "label": "Crossover Round",
+      "flavor": "A crossover fund pre-empted your IPO. The bankers are circling. Top off the tank for Dr. Vance.",
+      "value_band": "$5B",
+      "value_pct": 91,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": 6, "d": 0, "r": 0, "v": 0, "special": { "type": "funding" } }
+    },
+    {
+      "index": 36,
+      "type": "hazard",
+      "label": "Complete Response Letter",
+      "flavor": "Not an approval. Not a denial. A CRL — the regulatory equivalent of 'we need to talk.' The deficiencies are 'CMC and clinical.' That is the whole drug.",
+      "value_band": "$5B",
+      "value_pct": 93,
+      "milestone_slot": -1,
+      "canon": false,
+      "trigger": { "c": -3, "d": -2, "r": -2, "v": -3, "special": { "type": "hazard", "skip": true } }
+    },
+    {
+      "index": 37,
+      "type": "milestone",
+      "label": "NDA/BLA Submission",
+      "flavor": "You file. The application is 100,000+ pages. The reviewer reads all of it. This is the closest thing to love between a sponsor and the federal government.",
+      "value_band": "$9B",
+      "value_pct": 97,
+      "milestone_slot": 4,
+      "canon": false,
+      "trigger": { "special": { "type": "gate", "need_slot": 4, "submission": true, "scoopCheck": true } }
+    },
+    {
+      "index": 38,
+      "type": "exit",
+      "label": "FACE DR. VANCE",
+      "flavor": "The end of the snake. Dr. Eleanor Vance, Division of Regulatory Reckoning, has read everything. She is not impressed. Her highest praise is 'this is adequate.' Make your case.",
+      "value_band": "$9B",
+      "value_pct": 97,
+      "milestone_slot": 5,
+      "canon": true,
+      "trigger": { "special": { "type": "exit", "vance": true } }
+    }
+  ],
+  "milestone_label_map": {
+    "drug": [
+      "Pre-IND Gate",
+      "Phase 1 Gate",
+      "Phase 2 Gate",
+      "Phase 3 Gate",
+      "NDA/BLA Submission",
+      "Face Dr. Vance"
+    ],
+    "device": [
+      "Concept Gate",
+      "Pre-Sub (Q-Sub) Gate",
+      "Bench & Biocompat Gate",
+      "Pivotal · 510(k) vs PMA",
+      "Submission",
+      "Face Dr. Vance"
+    ]
+  },
+  "milestone_need_map": {
+    "drug": [12, 16, 22, 28, 20, 0],
+    "device": [10, 14, 16, 24, 18, 0]
+  },
+  "device_fork": {
+    "_at_milestone_slot": 3,
+    "_fires_only_on_pathway": "device",
+    "_reuses": "PATHWAYS.device.stages[3].blurb (EVT-035 pivotal flavor)",
+    "label": "Pivotal — 510(k) vs PMA?",
+    "flavor": "The fork. 510(k) is fast and crowded; PMA is slow, lonely, and wants real clinical evidence. De Novo is for the brave.",
+    "options": [
+      { "key": "a", "label": "510(k) — fast, crowded", "c": 2, "d": -1, "r": 0, "v": 1 },
+      { "key": "b", "label": "PMA — slow, real evidence", "c": -3, "d": 3, "r": 1, "v": 1 },
+      { "key": "c", "label": "De Novo — for the brave", "c": -1, "d": 1, "r": 2, "v": 2 }
+    ]
+  },
+  "deck_cards": {
+    "rnd": [
+      {
+        "name": "Clean Study, By the Book",
+        "flavor": "Lab and clinical work, slow and costly, but it builds the kind of data that survives FDA review. O. Vrsink, PhD nods approvingly.",
+        "effect": { "c": -3, "d": 3, "r": 0, "v": 0 },
+        "ready": 14
+      },
+      {
+        "name": "Real-World Evidence Accepted",
+        "flavor": "Registry data stands in for a control arm and FDA buys it. Your statistician, who fought for this, takes the rest of the day off. Earned.",
+        "effect": { "c": -1, "d": 3, "r": 1, "v": 1 },
+        "ready": 10
+      },
+      {
+        "name": "Expansion Cohort Surprise",
+        "flavor": "Your dose-escalation cohort lights up in a tumor type you weren't studying. A new indication, or a multiplicity problem. The statistician is sweating.",
+        "effect": { "d": 2, "v": 1, "r": 0, "c": 0 },
+        "ready": 8
+      },
+      {
+        "name": "Strong Phase 2 Readout",
+        "flavor": "The primary held and the safety table is boring in the best way. The data is real this time. Bank it before the market reprices you.",
+        "effect": { "c": 2, "d": 2, "r": 1, "v": 2 },
+        "ready": 12
+      },
+      {
+        "name": "Site Data Integrity Finding",
+        "flavor": "One investigator may have invented some subjects. You exclude the site, FDA notices you noticed, and your power evaporates like ethanol off a swab.",
+        "effect": { "c": -2, "d": -3, "r": -2, "v": -1 },
+        "ready": 0
+      },
+      {
+        "name": "Clean CMC Inspection",
+        "flavor": "Zero observations at your fill-finish site. The investigators leave early. Nobody on your team trusts it, and they are right to wait for the EIR.",
+        "effect": { "d": 1, "r": 3, "v": 1, "c": 0 },
+        "ready": 6
+      }
+    ],
+    "enroll": [
+      {
+        "name": "Open the Sites",
+        "flavor": "Bring patients in. Faster progress than careful R&D, but rushing enrollment risks messier data. Dr. Vance keeps a ledger; this earns an integrity flag.",
+        "effect": { "c": -2, "d": 1, "r": -1, "v": 0 },
+        "ready": 20,
+        "integrity": 1
+      },
+      {
+        "name": "Enrollment Ahead of Schedule",
+        "flavor": "Sites are filling slots faster than the Gantt chart allowed. Finance assumes you lied. You did not. Savor it; it will regress to the mean by Q3.",
+        "effect": { "c": -1, "d": 3, "r": 1, "v": 1 },
+        "ready": 16
+      },
+      {
+        "name": "Patient Advocacy Rallies",
+        "flavor": "Real patients show up to your AdComm in matching t-shirts and break the panel's heart. The p-value of 0.061 suddenly feels rude to mention.",
+        "effect": { "c": 1, "r": 4, "v": 1, "d": 0 },
+        "ready": 6
+      },
+      {
+        "name": "Pivotal Enrollment Shortfall",
+        "flavor": "Three sites haven't randomized a single patient since the kickoff dinner. The site PI 'is very excited,' per the monitoring report. The slope is flat.",
+        "effect": { "c": -2, "d": -2, "r": -1, "v": -2 },
+        "ready": 4
+      },
+      {
+        "name": "Hire a CRO",
+        "flavor": "Outsource to professionals who run 40 studies at once and remember your name 60% of the time. Faster enrollment, faster burn.",
+        "effect": { "c": -3, "d": 3, "r": 0, "v": 0 },
+        "ready": 18
+      }
+    ],
+    "fda": [
+      {
+        "name": "Request an Alignment Meeting",
+        "flavor": "Ask the agency to align on your plan. Costs money and time, buys goodwill and a clearer path — and slows the competitor a half-step.",
+        "effect": { "c": -1, "d": 1, "r": 2, "v": 0 },
+        "ready": 8
+      },
+      {
+        "name": "Breakthrough Therapy Designation",
+        "flavor": "FDA agrees your drug is promising enough to skip ahead in line. You now get to email the same reviewer four times a week, and they have to answer. Bliss.",
+        "effect": { "d": 1, "r": 3, "v": 2, "c": 0 },
+        "ready": 6
+      },
+      {
+        "name": "Fast Track Granted",
+        "flavor": "Rolling review unlocked. Submit your application in pieces, like a hostage negotiation where the hostage is your NDA and you are also the kidnapper.",
+        "effect": { "r": 2, "v": 2, "c": 0, "d": 0 },
+        "ready": 6
+      },
+      {
+        "name": "Positive Type B Meeting",
+        "flavor": "FDA agrees with your pivotal design in writing. You frame the minutes. You will cite them in three years when they pretend it never happened.",
+        "effect": { "d": 2, "r": 2, "v": 1, "c": 0 },
+        "ready": 8
+      },
+      {
+        "name": "Clinical Hold",
+        "flavor": "FDA has 'questions' about a safety signal. All dosing stops. Four months proving one elevated liver enzyme was the assay's fault, not yours. Lose a turn.",
+        "effect": { "c": -2, "d": -1, "r": -2, "v": -2 },
+        "ready": 0,
+        "skip": true
+      },
+      {
+        "name": "Reviewer Turnover",
+        "flavor": "Your primary reviewer left for industry. The new one hasn't read the file, disagrees about your endpoint, and emails 'just to align' Friday at 5:47pm.",
+        "effect": { "r": -2, "v": -1, "c": 0, "d": 0 },
+        "ready": 0
+      }
+    ],
+    "funding": [
+      {
+        "name": "Raise a Round",
+        "flavor": "Sell equity, smile at the board, promise the moon. Refills the war chest. Prof. Goetta Grant raises with no goodwill hit; everyone else dilutes.",
+        "effect": { "c": 5, "r": -1, "d": 0, "v": 0 },
+        "ready": 0,
+        "isRaise": true
+      },
+      {
+        "name": "Orphan Drug Designation",
+        "flavor": "Seven years of exclusivity and a tax credit, because your disease is rare and your accountant is thrilled. Free money with a clear rationale — the rarest creature in biotech.",
+        "effect": { "c": 3, "r": 1, "v": 2, "d": 0 },
+        "ready": 0
+      },
+      {
+        "name": "Priority Review Voucher",
+        "flavor": "You earned a PRV for your rare pediatric disease drug. Use it, or sell it for ~$100M to a company that wants to rush a wrinkle cream. Capitalism!",
+        "effect": { "c": 5, "v": 2, "d": 0, "r": 0 },
+        "ready": 0
+      },
+      {
+        "name": "RMAT Designation",
+        "flavor": "Your cell therapy is a Regenerative Medicine Advanced Therapy. Investors who cannot define 'potency assay' wire you money anyway. The answer was always yes.",
+        "effect": { "c": 4, "r": 2, "v": 3, "d": 0 },
+        "ready": 0
+      },
+      {
+        "name": "Investor Down Round",
+        "flavor": "A financing at half your last valuation 'to be supportive.' Cash now, dignity later. She still wants a board seat.",
+        "effect": { "c": 3, "r": -2, "v": -3, "d": 0 },
+        "ready": 0
+      },
+      {
+        "name": "The Boot-Strap Gambit",
+        "flavor": "Out of runway, you boot-strap the next milestone on grant funding and sheer will. Heroic if it works, a Chapter 7 filing if it doesn't.",
+        "effect": { "c": 4, "r": 2, "d": 0, "v": 0 },
+        "ready": 0
+      }
+    ]
+  },
+  "notes": "FINAL BOARD SPEC — addresses every gap/voice/mechanic item in the critique. Read against game.js.\n\n=== 1. VALUE_BAND IS NOW REAL (gap: VALUE_BAND INVENTION / NON-MONOTONICITY) ===\nEvery square.value_band is one of the EXACT 10 strings in game.js VALUE_BANDS ($100k,$1M,$5M,$25M,$90M,$300M,$900M,$2.5B,$5B,$9B). No invented $60M/$1.25B/$3.5B/$6B/$7B/$8B. The finer-grained $ in square.label (e.g. '$10M','$70M','$1.5B','$3B') is DECORATIVE tile text honoring the painted ladder; it is NOT fed to valueLabel(). Only value_band + value_pct touch the engine.\n\n=== 2. POSITION = PRODUCT VALUE, NOW WIRED (gap: BOARD-POSITION-AS-VALUE UNWIRED, fix: per-index canonical value) ===\nEach square carries value_pct (0-97), the canonical engine value-scalar at that index, monotonic non-decreasing start->exit. On landing the engine does: S.res.value = Math.max(S.res.value, sq.value_pct). Then valueLabel(S.res.value) === sq.value_band ALWAYS, and the HUD value tile == the square you're on. value_pct thresholds chosen so each value_band's anchor (from VALUE_BANDS) sits at or below the squares that claim it: $100k@0, $1M@8, $5M@16-22, $25M@25-33, $90M@36-48, $300M@50-62, $900M@64-75, $2.5B@78-88, $5B@90-93, $9B@95-97. Per-square {v:N} deltas remain as ADDITIVE bonuses ON TOP of the position floor (good play can push value above the floor; it can never sink below where you stand). This is the literal encoding locked-decision #1 demanded.\n\n=== 3. TRIGGER SHAPES ARE ENGINE-REAL (mechanic: every 'type' was decorative) ===\nEVERY trigger now has (a) optional raw deltas {c,d,r,v} at top level that route through the EXISTING rawToDelta()+applyDelta() unchanged, and (b) a special:{type:...} naming the handler. The build adds ONE new dispatcher, fireSquare(sq), called by the spin/land step:\n  function fireSquare(sq){\n    applyDelta(rawToDelta(sq.trigger));            // top-level c/d/r/v (existing path)\n    const sp = sq.trigger.special; if(!sp) return;\n    switch(sp.type){\n      case 'none': case 'value': break;            // value floor already set by max() above\n      case 'funding': /* top-level {c:+N} already applied; that IS the refill */ break;\n      case 'hazard':\n        if(sp.skip){ S.turn++; S.competitor+=S.competitorRise; }      // reuses skip semantics from drawEvent\n        if(sp.bankruptIfBroke && S.res.capital<=0) return lose('bankrupt'); // NEW check, honors locked rule #2\n        break;\n      case 'deck': return drawFromDeck(sp.deck, sp.alsoReg);          // NEW fn, see (4)\n      case 'fork': return showSquareChoice(sq);                       // thin wrapper over showChoice() shape\n      case 'coin': { const h=Math.random()<0.5; applyDelta(rawToDelta(h?sp.heads:sp.tails)); break; } // reuses coin branch logic\n      case 'dice': { const f=['check','x','bang','at'][Math.floor(Math.random()*4)]; const b=sp[f]||{}; applyDelta(rawToDelta(b)); if(b.skip){S.turn++;S.competitor+=S.competitorRise;} break; } // reuses dice branch logic\n      case 'race': { const ahead=S.pos>=S.competitorPos; applyDelta(rawToDelta(ahead?sp.ahead:sp.behind)); break; } // see (5) BOARD-MODE race\n      case 'gate': return gateCheck(sq);                              // see (6)\n      case 'exit': return openReview(); /* Vance + win path, existing afterReview() */\n    }\n    clamp(); if(!checkEnd()) renderAll();\n  }\nNothing in applyDelta/rawToDelta/showChoice/openReview changes; the new code is fireSquare + drawFromDeck + gateCheck + competitorPos.\n\n=== 4. FORCED-DECK DRAW (mechanic: type:'deck' had no handler — the most-used unbuilt mechanic) ===\nNew drawFromDeck(deckKey, alsoReg): pulls a RANDOM card from deck_cards[deckKey] (NOT uniformly from all 36 — that's the board-canon 'draw only from deck X'), applies its effect via applyDelta(rawToDelta(card.effect)), adds card.ready to S.readiness, honors card.integrity/card.skip/card.isRaise EXACTLY like onAction() already does (same fields, so raiseBonus/raiseNoRepHit/integrity-ledger code paths are reused, no new logic). Fires the card-flip animation = the player's agency moment. If alsoReg:true (idx8, the painted 'Draw +1 staff & +1 REG' square) it ALSO calls the existing drawEvent(1.0) to force one REG-deck card on top — that honors the 2018 board's literal 'draw two' duality (one deck card + one REG card). idx5 'Draw New Staff' and idx8 are the two distinct painted staff squares, no longer flattened.\n\n=== 5. RACE IS BOARD-POSITION, NOT DATA (mechanic: race tested S.res.data>=45, wrong for board mode; fix + locked rule #6) ===\nAdd S.competitorPos (the dog's square index), advanced each player turn by the spinner-equivalent competitor step (reuse competitorRise cadence, mapped to ~1-2 squares/turn so a competent player stays ahead). idx29 race now compares S.pos >= S.competitorPos (ahead/behind), NOT data. SCOOP (locked rule #6): in gateCheck for idx37 (scoopCheck:true), if S.competitorPos >= 37 before the player clears submission => lose('beaten_to_market'). The dog physically walks the same 0-38 indices; first to idx37 wins the race. Competitor token 🐕 renders at S.competitorPos along the same waypoint polyline.\n\n=== 6. GATES ON LANDING + DEVICE NEEDS + DEVICE FORK (mechanic: gate check lived in advance(), drug-only needs; gap: DEVICE FORK MISSING) ===\nMilestone squares (idx2/7/14/22/37) fire special.type:'gate' with need_slot (0..4). gateCheck(sq): need = milestone_need_map[S.pathway][sq.special.need_slot]. If S.readiness < need => block advance / bounce the avatar back one square (or hold at the gate until readiness met on a later turn) — re-plumbs advance()'s `if(S.readiness<st.need)return` INTO the landing handler. milestone_need_map gives device 10/14/16/24/18 vs drug 12/16/22/28/20, so a device player faces DEVICE difficulty (was hardcoded to drug). milestone_label_map swaps the GATE LABELS by pathway (slot indexes the array). DEVICE FORK: idx22 carries special.deviceFork:true; when S.pathway==='device', gateCheck ALSO fires the device_fork choose-modal (510(k) vs PMA vs De Novo) using device_fork.options — the device player's single defining regulatory decision, previously absent. On drug pathway deviceFork is ignored (plain Phase-3 gate). submission:true on idx37 opens openReview() once the gate clears; vance:true on idx38 = final face-off (existing afterReview win path).\n\n=== 7. FUNDING REFILL (mechanic: type:'funding' {amount} had no handler) ===\nDropped the fake {amount} key. Funding squares (idx3/6/35) carry a real top-level {c:+N} that applyDelta already understands — THAT is the capital refill. special.type:'funding' is just a render/sound tag (golden card, cha-ching). idx3 +4, idx6 +5, idx35 +6: refills sized against the per-square burn so the early/mid funding cluster + the Funding deck are the only way to outrun bankruptcy.\n\n=== 8. CAPITAL-AS-FUEL BURN (locked rule #2 — was absent from content AND engine) ===\nSPIN+BURN, the turn's movement step:\n  function spin(){ const n=1+Math.floor(Math.random()*4); for(let i=0;i<n && S.pos<38;i++){ S.pos++; S.res.capital -= BURN; if(S.res.capital<0) return lose('bankrupt'); }\n    S.res.value = Math.max(S.res.value, SQUARES[S.pos].value_pct); advanceCompetitor(); fireSquare(SQUARES[S.pos]); }\nBURN = _meta.burn_per_square = 6 ($6M/square). A 38-square climb burns ~228M against a ~100M+character start, forcing 2-4 funding refills (idx3/6/35 + Funding-deck draws). bankruptIfBroke at idx16 is the painted 'You are out of money' trap: land there at capital<=0 and you lose even if a refill is one square away. Tune BURN 4-7 to taste; 6 gives the intended squeeze.\n\n=== 9. TURN LOOP (locked rule #3) ===\n(a) player chooses ONE of the four decks and DRAWS (card-flip anim + flip sound = agency; random card from that deck via drawFromDeck on the turn-start free choice — distinct from forced board-square deck draws); (b) SPIN 1-4, climb that many squares, BURN per square; (c) fireSquare on the landed index. Forks/coin/dice/race/gate all resolve on landing. Competitor advances every turn (5).\n\n=== 10. VOICE FIXES ===\n- DE-DUPED: each original joke has exactly ONE home now. '1990s called/Frame this'->stays on idx20 square ONLY; rnd 'Real-World Evidence' got a fresh line (statistician takes the day off). 'Nobody read the secondaries'->idx15 square ONLY; rnd 'Strong Phase 2' got a fresh line (boring safety table). matching-t-shirts/p=0.061->enroll 'Patient Advocacy' card ONLY (pulled off any square). parking-lot CMC weep->idx... not reused as a square; rnd 'Clean CMC' got a fresh line (wait for the EIR). enrollment-shortfall 11%/board-meeting-Thursday->idx11 square ONLY; enroll 'Pivotal Enrollment Shortfall' card got a fresh line (kickoff dinner). Fast Track hostage-negotiation->fda card ONLY. Clinical Hold liver-enzyme->fda card ONLY (square idx pulled). Down Round Ms.N.Vested->idx26 square ONLY; funding card trimmed to not name her twice.\n- RESCUED A-TIER JOKES now spatialized as the late-board FILING gauntlet: Form 483 (idx18), AdComm dice (idx19), Government Shutdown lose-a-turn (idx30), Refuse-to-File 'so is your dignity' (idx34), Complete Response Letter 'that is the whole drug' (idx36). CRL+RtF sit at the FILING end ($5B band) where they belong, making the back half HARDER, not a victory lap (fix: difficulty-curve audit).\n- '— Board canon.' tag REMOVED from all rendered flavor; replaced by non-rendered canon:true boolean per square (idx0,3,5,6,8,10,16,21,24,28,38) for QA/provenance.\n- NARRATOR WIND-UP trimmed: old idx35/36 'finish line is in sight'/'nothing left but to file and face her' cut; replaced with deadpan facts in the register of 'The mice are unmoved.'\n- FIRE-THE-CRO ART/TEXT contradiction resolved: idx21 renamed 'Fire the CRO?' to MATCH the painted board, keeps the EVT-031 turnaround-chief mechanic, and leans in with one self-aware line ('somewhere in the minutes CRO became CEO... the board cannot keep its C-suite straight either').\n\n=== 11. TYPE COVERAGE (gap: coin/race once, dice absent) ===\ncoin idx24, dice idx19 (AdComm — EVT-025/033/035 swing mechanics now have a board home), race idx29. Hazard density now climbs in the back half (idx18/26/30/32/34/36) — the Phase-3/NDA gauntlet, not a coast to the exit.\n\n=== 12. STILL-DROPPED CARDS (intentional, flagged) ===\nNot every one of the 36 RAW_DECK cards is spatialized; the un-homed ones (Post-Market Safety Signal, KOL Feud, Accelerated Approval choose, FDA-Wants-New-Endpoint choose, Type A dice, Pre-Sub Q-Sub dice, Warning Letter) remain available to the EXISTING drawEvent(prob) random-REG path that still fires on integrity-flagged draws and (optionally) on certain squares via alsoReg. So they are NOT lost — they live in the REG deck that the board still draws from on top of the four themed decks. Warning Letter 'short-sellers find it before your CEO finishes coffee' is a natural future hazard if a 40th square is wanted; left in REG for now to keep the count at 39 (0-38)."
+}

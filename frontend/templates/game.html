@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Race to Approval — trialcat</title>
-    <meta name="description" content="A satirical clinical-trials sim from The Real Cat AI Labs. Shepherd a real FDA-regulated product from IND to approval before the money, the clock, or the competition kills it. Can you run your trials fast enough?">
-    <meta property="og:title" content="Race to Approval — the clinical trials game">
-    <meta property="og:description" content="A strategy sim where you're the sponsor and the enemy is the regulatory timeline. Built on real ClinicalTrials.gov data.">
+    <meta name="description" content="A satirical clinical-trials board game from The Real Cat AI Labs. Draw a card, spin the wheel, and climb a real FDA-regulated product from $100k to a $9B exit before the money, the clock, or the competition kills it. Can you run your trials fast enough?">
+    <meta property="og:title" content="Race to Approval — the clinical trials board game">
+    <meta property="og:description" content="A spin-and-climb strategy board game where you're the sponsor and the enemy is the regulatory timeline. Built on real ClinicalTrials.gov data.">
     <meta property="og:type" content="website">
     <link rel="stylesheet" href="/static/css/game.css">
     <link rel="icon" href="/static/img/favicon.png" type="image/png">
@@ -16,6 +16,7 @@
     <header class="game-header">
         <div class="brand"><span class="logo-dot"></span> trialcat<span style="color:var(--c-green-soft);font-weight:600;">/race</span></div>
         <nav>
+            <button class="ghost-btn" id="sfx-toggle" aria-label="Mute">🔊</button>
             <button class="ghost-btn" id="nav-leaderboard">🏆 Leaderboard</button>
             <a class="ghost-btn" href="/game/rules">How to play</a>
             <a class="ghost-btn" href="/">← Back to the map</a>
@@ -28,9 +29,10 @@
             <div class="kicker">A Real Cat AI Labs Simulation</div>
             <h1>Race to&nbsp;Approval</h1>
             <p class="sub">
-                A strategy sim where you're the sponsor and the contagion is your own clinical program.
-                Shepherd a <b>real</b> FDA-regulated product from first-in-human to approval before the
-                money, the clock, or the competition buries it. <b>Can you run your trials fast enough?</b>
+                A spin-and-climb board game where you're the sponsor and the contagion is your own clinical program.
+                Draw a card, spin the wheel, and shepherd a <b>real</b> FDA-regulated product up the snake from
+                first-in-human to a $9B exit — before the money, the clock, or the competition buries it.
+                <b>Can you run your trials fast enough?</b>
             </p>
             <button class="cta-big" id="btn-begin">Start your program ▶</button>
             <img class="hero-cover" src="/static/img/board.svg" alt="The Strategy Game (for Regulatory Affairs) — the game board: drive your product's value from $100k to a $9B exit" loading="lazy">
@@ -41,12 +43,12 @@
                     <p>Every game deals you an actual trial from ClinicalTrials.gov. A drug routes you through IND → phases → NDA/BLA. A device forks to 510(k) or PMA. The board knows the difference.</p>
                 </div>
                 <div class="how-card">
-                    <h3>🧪 Spend wisely</h3>
-                    <p>Capital, reputation, evidence, and time. Enroll fast and dirty, or slow and clean. Engage the FDA early, or roll the dice. Every choice burns a resource you'll miss later.</p>
+                    <h3>🎡 Draw, spin, climb</h3>
+                    <p>Each turn: draw a card from one of four decks (R&D, Enroll, FDA, Funding), then spin to climb the snake. Every square burns capital you'll miss later. Land on the right squares; dodge the gauntlet.</p>
                 </div>
                 <div class="how-card">
                     <h3>🗂️ Face the reviewer</h3>
-                    <p>At submission, make your case to Dr. Eleanor Vance of the Division of Regulatory Reckoning. She has read everything. She is not impressed. Her highest praise is "this is adequate." Convince her anyway.</p>
+                    <p>At the top of the board, make your case to Dr. Eleanor Vance of the Division of Regulatory Reckoning. She has read everything. She is not impressed. Her highest praise is "this is adequate." Convince her anyway.</p>
                 </div>
             </div>
             <p class="credlinks">
@@ -93,7 +95,7 @@
         <div class="hero" style="padding-bottom:8px;">
             <div class="kicker">Choose your founder</div>
             <h1 style="font-size:clamp(32px,6vw,60px);">Who's running this company?</h1>
-            <p class="sub">Six archetypes from the original board. Each one bends the odds. Pick the one whose delusion matches yours.</p>
+            <p class="sub">Six archetypes from the original board. Each one bends the climb. Pick the one whose delusion matches yours.</p>
         </div>
         <div class="char-grid" id="characters-grid"><!-- filled by JS --></div>
     </section>
@@ -105,29 +107,29 @@
         <div class="hud" id="hud"><!-- resource tiles filled by JS --></div>
 
         <div class="tension">
-            <div class="lab"><span>🏁 Competitor progress</span><span id="tension-pct">0%</span></div>
+            <div class="lab"><span>🏁 Competitor — racing you to file</span><span id="tension-pct">0%</span></div>
             <div class="track"><i id="tension-bar" style="width:0%"></i></div>
         </div>
 
-        <!-- The REAL board: the cat climbs the product-value track ($100k → $9B) -->
-        <div class="value-board-wrap">
-            <div class="vb-label">📈 The race up the value board — <span class="leg leg-you">🐈 you</span> vs <span class="leg leg-rival">🐕 the competition</span> · you're worth <b id="vb-now">$100k</b></div>
-            <div class="value-board" id="value-board">
-                <img src="/static/img/board.svg" alt="The Strategy Game board — the product-value track from $100k to a $9B exit">
-                <span class="board-rival" id="board-rival" title="The competition — racing you to approval">🐕</span>
-                <span class="board-cat" id="board-cat" title="You">🐈</span>
-            </div>
+        <!-- The objective at a glance: the next milestone gate + readiness toward it. -->
+        <!-- Readable on a phone where the tile text scales too small to make out. -->
+        <div class="gate-status" id="gate-status"><!-- filled by JS --></div>
+
+        <!-- THE BOARD: a code-generated sticker-comic snake. The cat climbs it square -->
+        <!-- by square; the dog races the same track. Tokens are spans layered over SVG. -->
+        <div class="board-stage" id="board-stage">
+            <div id="board-svg"><!-- buildBoardSVG() injects the whole board here --></div>
+            <span class="token rival" id="board-rival" title="The competition — racing you to file">🐕</span>
+            <span class="token cat" id="board-cat" title="You">🐈</span>
         </div>
 
-        <div class="board" id="board"><!-- stage nodes filled by JS --></div>
-
-        <div class="readiness">
-            <div class="lab"><span id="readiness-label">Stage readiness</span><span><b id="readiness-now">0</b> / <span id="readiness-need">0</span></span></div>
-            <div class="track"><i id="readiness-bar" style="width:0%"></i></div>
+        <!-- THE SPINNER: fate. Disabled until you've drawn a card this turn. -->
+        <div class="spinner-dock">
+            <div id="spinner-mount"><!-- makeSpinner() mounts the wheel here --></div>
         </div>
 
-        <div class="actions-label">🎴 Your turn — draw a card from one of the four decks:</div>
-        <div class="actions" id="actions"><!-- action cards filled by JS --></div>
+        <div class="actions-label" id="actions-label">🎴 <b>Your turn.</b> Draw a card from one of the four decks:</div>
+        <div class="actions" id="actions"><!-- deck stacks filled by JS --></div>
 
         <div class="log">
             <h3>Program log</h3>
@@ -136,6 +138,12 @@
     </section>
 
     <!-- ============================ OVERLAYS ============================ -->
+
+    <!-- Deck-draw flip card (the player's agency moment) -->
+    <div class="overlay" id="overlay-flip">
+        <div class="flip-mount"><!-- drawAndFlip() injects the flip card + Take it button --></div>
+    </div>
+
     <div class="overlay" id="overlay-event">
         <div class="card-modal" id="event-card">
             <div class="card-kind" id="event-kind">EVENT</div>
@@ -164,7 +172,7 @@
         </div>
     </div>
 
-    <!-- Choice fork (buyout / hire CRO / fire CEO / endpoint) -->
+    <!-- Choice fork (buyout / hire CRO / fire CEO / 510k-vs-PMA) -->
     <div class="overlay" id="overlay-choice">
         <div class="card-modal swing" id="choice-box">
             <div class="card-kind" style="color:var(--c-yellow);">⚖ A decision lands on your desk</div>
