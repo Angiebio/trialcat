@@ -596,3 +596,23 @@ a:hover { text-decoration-color: var(--c-orange); }
         animation: none !important;
     }
 }
+
+/* --------------------------------------------------------------------------
+   Mobile ribbon fix. Placed AFTER the base ribbon rules so it actually wins —
+   the earlier @media (max-width:768px) .race-title override was dead by source
+   order. On a phone the long title squeezed .race-track to 0 width, so the
+   absolutely-positioned galloping cat rendered ON TOP of "Can you run...".
+   Give the cat its own fixed lane; let the title take the rest (wrapping to two
+   lines if it must) and grow the ribbon to fit instead of clipping the cat onto text.
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .race-ribbon { height: auto; min-height: var(--ribbon-height); }
+    .race-track  { flex: 0 0 52px; min-width: 52px; }    /* the cat's lane — never collapse */
+    .finish-flag { display: none; }                       /* no room for the APPROVED flag on a phone */
+    .hurdle      { display: none; }                        /* hide the milestone labels too (their earlier display:none was also dead by source order) — they ghosted behind the cat */
+    .runner      { left: 2px; }                           /* anchor the cat at the lane start */
+    .run-cat     { width: 44px; height: 28px; }           /* a touch smaller so it sits clean */
+    .race-cta    { flex: 1 1 auto; min-width: 0; padding: 6px 12px 6px 6px; gap: 8px; }
+    .race-title  { font-size: 12px; line-height: 1.15; flex: 1; min-width: 0; }  /* may wrap; ribbon grows */
+    .race-go     { flex-shrink: 0; }
+}
