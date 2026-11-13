@@ -331,7 +331,7 @@ async function showCountryStats(isoCode, countryName, layer) {
                 <h3>${countryName} (${isoCode})</h3>
                 <table>
                     <tr><td>Trials</td><td><strong>${stats.trial_count.toLocaleString()}</strong></td></tr>
-                    <tr><td>Total enrolled</td><td><strong>${stats.total_enrollment ? stats.total_enrollment.toLocaleString() : 'N/A'}</strong></td></tr>
+                    <tr><td>Enrollment (whole trials)</td><td><strong>${stats.total_enrollment != null ? stats.total_enrollment.toLocaleString() : 'N/A'}</strong></td></tr>
                     ${stats.approx_rate_sample_size > 0 ? `
                     <tr><td colspan="2" class="section-header">Approx. enrollment rate (pts/mo)</td></tr>
                     <tr><td>Low</td><td>${stats.approx_rate_min?.toFixed(1) ?? 'N/A'}</td></tr>
@@ -343,6 +343,7 @@ async function showCountryStats(isoCode, countryName, layer) {
                     <tr><td>Avg duration</td><td>${stats.avg_months_enrolling.toFixed(1)} months</td></tr>
                     ` : ''}
                 </table>
+                <p class="popup-note">Each trial's full enrollment, counted once. A trial with sites in several places counts in full in each, so this is not the number of patients enrolled here.</p>
                 ${stats.approx_rate_sample_size < 5 && stats.approx_rate_sample_size > 0 ?
                     '<p class="popup-warning">⚠ Small sample — interpret with caution</p>' : ''}
                 <div class="popup-actions">
@@ -445,7 +446,7 @@ async function showStateStats(stateCode, stateName, layer) {
                 <h3>${stateName} (${stateCode})</h3>
                 <table>
                     <tr><td>Trials</td><td><strong>${stats.trial_count.toLocaleString()}</strong></td></tr>
-                    <tr><td>Total enrolled</td><td><strong>${stats.total_enrollment ? stats.total_enrollment.toLocaleString() : 'N/A'}</strong></td></tr>
+                    <tr><td>Enrollment (whole trials)</td><td><strong>${stats.total_enrollment != null ? stats.total_enrollment.toLocaleString() : 'N/A'}</strong></td></tr>
                     ${stats.approx_rate_sample_size > 0 ? `
                     <tr><td colspan="2" class="section-header">Approx. enrollment rate (pts/mo)</td></tr>
                     <tr><td>Low</td><td>${stats.approx_rate_min?.toFixed(1) ?? 'N/A'}</td></tr>
@@ -457,6 +458,7 @@ async function showStateStats(stateCode, stateName, layer) {
                     <tr><td>Avg duration</td><td>${stats.avg_months_enrolling.toFixed(1)} months</td></tr>
                     ` : ''}
                 </table>
+                <p class="popup-note">Each trial's full enrollment, counted once. A trial with sites in several places counts in full in each, so this is not the number of patients enrolled here.</p>
                 ${stats.approx_rate_sample_size < 5 && stats.approx_rate_sample_size > 0 ?
                     '<p class="popup-warning">⚠ Small sample — interpret with caution</p>' : ''}
                 <div class="popup-actions">
@@ -573,7 +575,9 @@ function exportCSV() {
         [],
         ['Metric', 'Value'],
         ['Total trials', stats.trial_count],
-        ['Total enrolled', stats.total_enrollment ?? 'N/A'],
+        // Whole-trial enrollment, once per trial. Registry data has no per-site or
+        // per-country enrollment, so the label says what the number is.
+        ['Enrollment of these trials (whole-trial, counted once each)', stats.total_enrollment ?? 'N/A'],
         ['Approx. enrollment rate — Low (pts/mo)', stats.approx_rate_min?.toFixed(1) ?? 'N/A'],
         ['Approx. enrollment rate — Median (pts/mo)', stats.approx_rate_median?.toFixed(1) ?? 'N/A'],
         ['Approx. enrollment rate — High (pts/mo)', stats.approx_rate_max?.toFixed(1) ?? 'N/A'],

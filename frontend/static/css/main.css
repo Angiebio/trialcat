@@ -332,6 +332,16 @@ a:hover { text-decoration-color: var(--c-orange); }
     font-style: italic;
 }
 
+/* What the enrollment figure means. Informational, so muted rather than the
+   orange of a warning. Lives outside the table: a full-width cell would take
+   both the nowrap of td:first-child and the mono right-align of td:last-child. */
+.popup-note {
+    margin: 6px 0 0 0;
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--c-purple-60);
+}
+
 /* ==========================================================================
    DRILL-DOWN CONTROLS
    ========================================================================== */

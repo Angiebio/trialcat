@@ -33,9 +33,16 @@ class AggregateRow(BaseModel):
 
     group_key: str = Field(description="Country code or state code")
     trial_count: int = Field(description="Number of distinct trials with at least one site")
+    # Whole-trial numbers, counted once per trial per group. ClinicalTrials.gov
+    # reports enrollment per trial, never per site or per country, so a
+    # per-country patient count is not something this data can give.
     total_enrollment: Optional[int] = Field(
         default=None,
-        description="Sum of enrollment_count across matching trials",
+        description=(
+            "Whole-trial enrollment, summed once per distinct trial with a matching "
+            "site in this group. Not patients enrolled in this geography: a "
+            "multinational trial counts in full in every group it appears in."
+        ),
     )
 
 
@@ -44,7 +51,12 @@ class AggregateResponse(BaseModel):
 
     group_by: str = Field(description="What the rows are grouped by: 'country' or 'us_state'")
     rows: list[AggregateRow]
-    total_trials: int = Field(description="Total distinct trials across all groups")
+    total_trials: int = Field(
+        description=(
+            "Distinct trials matching the filters (the cohort), each counted once, "
+            "including trials with no mapped site. Not the sum of row trial_counts."
+        )
+    )
     generated_at: datetime = Field(description="Server timestamp when this response was computed")
 
 
@@ -68,7 +80,11 @@ class StatsResponse(BaseModel):
     trial_count: int = Field(description="Distinct trials matching the filter")
     total_enrollment: Optional[int] = Field(
         default=None,
-        description="Sum of enrollment_count across matching trials",
+        description=(
+            "Whole-trial enrollment summed once per distinct matching trial. With a "
+            "country or state filter this is the enrollment of trials that have a "
+            "site there, not the number of patients enrolled there."
+        ),
     )
 
     # --- Distribution of approximate monthly enrollment rate ---

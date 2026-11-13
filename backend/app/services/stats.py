@@ -125,87 +125,67 @@ def _apply_join_filters(stmt: Select, filters: FilterQuery) -> Select:
 # =============================================================================
 
 
-def aggregate_by_country(session: Session, filters: FilterQuery) -> AggregateResponse:
-    """Group matching trials by ISO country code.
+def _aggregate_geography(session: Session, filters: FilterQuery,
+                         group_by: str) -> AggregateResponse:
+    """Aggregate unique (trial identity, geography) pairs, never joined site rows.
 
-    Each trial contributes once per country it has sites in — so a
-    multinational trial appears in multiple groups. The overall
-    `total_trials` count is DISTINCT so it reflects the filter cohort size.
+    Purpose: the choropleth rows. One contribution per trial per group.
+    Contract: rows hold (group_key, distinct trials, summed whole-trial
+    enrollment). `total_trials` is the filter cohort, counted once per trial,
+    exactly as before this fix, so the sidebar headline keeps its meaning.
+    Invariant: adding a second matching site or intervention to a trial changes
+    no number here. Two different trials with equal enrollment stay two trials.
+    Rationale: enrollment belongs to a trial, not to a site row. The version
+    this replaces joined Location and then summed, so a trial with 61 US sites
+    added its enrollment to the US 61 times, while its docstring promised "each
+    trial contributes once per country". SUM(DISTINCT enrollment) is not a fix
+    either: it merges different trials that happen to share a value.
+    Failure: unknown geography (NULL key) is excluded from rows, never coerced
+    into a bucket. A NULL enrollment stays NULL, never 0.
+    Evidence: tests/test_stats_grain.py (pair uniqueness, filter parity,
+    extra-site invariance, cohort total).
+
+    These are enrollments of trials with a site in the geography, not patients
+    enrolled in that geography. Multinational group totals are not additive.
     """
-    # Per-country counts: distinct trials with at least one site in each country
-    row_stmt = (
-        select(
-            Location.country_code,
-            func.count(distinct(Trial.nct_id)).label("trial_count"),
-            func.sum(Trial.enrollment_count).label("total_enrollment"),
-        )
-        .join(Location, Location.trial_nct_id == Trial.nct_id)
-        .where(Location.country_code.isnot(None))
-        .group_by(Location.country_code)
-        .order_by(func.count(distinct(Trial.nct_id)).desc())
-    )
-    row_stmt = apply_filters(row_stmt, filters)
-    # Location is already joined above; add the intervention drill-down join.
-    row_stmt = _apply_intervention_join(row_stmt, filters)
-
-    rows = [
-        AggregateRow(
-            group_key=cc,
-            trial_count=int(count),
-            total_enrollment=int(total) if total is not None else None,
-        )
-        for cc, count, total in session.execute(row_stmt).all()
-    ]
-
-    # Distinct trial count (independent of how many countries each trial hits)
+    key = Location.country_code if group_by == "country" else Location.state_code
+    pairs = (select(Trial.nct_id.label("trial_id"), key.label("group_key"))
+             .join(Location, Location.trial_nct_id == Trial.nct_id)
+             .where(key.isnot(None)))
+    # The Location join already exists: apply its filters here exactly once.
+    if filters.country_code:
+        pairs = pairs.where(Location.country_code == filters.country_code)
+    if filters.state_code:
+        pairs = pairs.where(Location.state_code == filters.state_code)
+    pairs = _apply_intervention_join(pairs, filters)
+    pairs = apply_filters(pairs, filters).distinct().subquery()
+    statement = (select(pairs.c.group_key, func.count(pairs.c.trial_id),
+                        func.sum(Trial.enrollment_count))
+                 .join(Trial, Trial.nct_id == pairs.c.trial_id)
+                 .group_by(pairs.c.group_key)
+                 .order_by(func.count(pairs.c.trial_id).desc(), pairs.c.group_key))
+    rows = [AggregateRow(group_key=key, trial_count=int(count),
+                         total_enrollment=int(total) if total is not None else None)
+            for key, count, total in session.execute(statement).all()]
+    # The headline is the cohort, not the union of groups. A trial with no
+    # mapped site still matched the user's filters, and the sidebar has always
+    # counted it. Changing that meaning would be an API contract change riding
+    # along with an arithmetic fix, so it stays as it was (the schema
+    # description now says so). Evidence: test_total_trials_is_the_cohort.
     total = _count_distinct_trials(session, filters)
+    return AggregateResponse(group_by=group_by, rows=rows, total_trials=total,
+                             generated_at=datetime.now(timezone.utc))
 
-    return AggregateResponse(
-        group_by="country",
-        rows=rows,
-        total_trials=total,
-        generated_at=datetime.now(timezone.utc),
-    )
+
+def aggregate_by_country(session: Session, filters: FilterQuery) -> AggregateResponse:
+    """Count each matching trial once per country containing a matching site."""
+    return _aggregate_geography(session, filters, "country")
 
 
 def aggregate_by_us_state(session: Session, filters: FilterQuery) -> AggregateResponse:
-    """Group matching trials by USPS state code. Only considers US locations."""
-    # Force US country code; respect any other filter the caller sent
+    """Count each matching trial once per US state containing a matching site."""
     us_filters = filters.model_copy(update={"country_code": "US"})
-
-    row_stmt = (
-        select(
-            Location.state_code,
-            func.count(distinct(Trial.nct_id)).label("trial_count"),
-            func.sum(Trial.enrollment_count).label("total_enrollment"),
-        )
-        .join(Location, Location.trial_nct_id == Trial.nct_id)
-        .where(Location.country_code == "US")
-        .where(Location.state_code.isnot(None))
-        .group_by(Location.state_code)
-        .order_by(func.count(distinct(Trial.nct_id)).desc())
-    )
-    row_stmt = apply_filters(row_stmt, us_filters)
-    # Location is already joined above; add the intervention drill-down join.
-    row_stmt = _apply_intervention_join(row_stmt, us_filters)
-
-    rows = [
-        AggregateRow(
-            group_key=sc,
-            trial_count=int(count),
-            total_enrollment=int(total) if total is not None else None,
-        )
-        for sc, count, total in session.execute(row_stmt).all()
-    ]
-
-    total = _count_distinct_trials(session, us_filters)
-
-    return AggregateResponse(
-        group_by="us_state",
-        rows=rows,
-        total_trials=total,
-        generated_at=datetime.now(timezone.utc),
-    )
+    return _aggregate_geography(session, us_filters, "us_state")
 
 
 # =============================================================================
@@ -220,21 +200,31 @@ def compute_stats(session: Session, filters: FilterQuery) -> StatsResponse:
     enrollment rates (min/median/max + sample size so the UI can decide
     whether to show them). Also returns average months_enrolling.
     """
-    trial_count = _count_distinct_trials(session, filters)
+    # Resolve membership at trial grain before any arithmetic. Location and
+    # intervention joins decide WHO is in the cohort; they must never decide
+    # HOW MANY TIMES a trial is counted. This is the number in the country
+    # popup, so the old join-then-sum inflated exactly the figure people read.
+    # Evidence: tests/test_stats_grain.py::test_stats_keep_trial_identity.
+    ids = _apply_join_filters(select(Trial.nct_id), filters)
+    ids = apply_filters(ids, filters).distinct().subquery()
+    eligible = Trial.nct_id.in_(select(ids.c.nct_id))
+    trial_count = int(session.scalar(select(func.count()).select_from(ids)) or 0)
 
     # Total enrollment
     total_enr_stmt = select(func.sum(Trial.enrollment_count)).select_from(Trial)
-    total_enr_stmt = _apply_join_filters(total_enr_stmt, filters)
-    total_enr_stmt = apply_filters(total_enr_stmt, filters)
+    total_enr_stmt = total_enr_stmt.where(eligible)
     total_enrollment = session.execute(total_enr_stmt).scalar()
 
     # Pull rate values into Python for median. SQLite has no PERCENTILE_CONT.
     rate_stmt = select(Trial.approx_enrollment_rate_per_month).select_from(Trial)
-    rate_stmt = _apply_join_filters(rate_stmt, filters)
-    rate_stmt = apply_filters(rate_stmt, filters)
+    rate_stmt = rate_stmt.where(eligible)
     rate_stmt = rate_stmt.where(Trial.approx_enrollment_rate_per_month.isnot(None))
-    # Distinct on nct_id to avoid double-counting trials with multiple sites
-    rate_stmt = rate_stmt.distinct()
+    # Preserve equal rate values from different trials: each is one observation.
+    # The old line here was `.distinct()` under a comment saying "distinct on
+    # nct_id", but the query selected only the rate column, so it deduplicated
+    # VALUES: two trials at 10 pts/mo became one, and the median moved. The
+    # `eligible` filter above already gives one row per trial, so nothing is
+    # deduplicated here at all. Evidence: test_stats_keep_trial_identity.
 
     rates = [r[0] for r in session.execute(rate_stmt).all()]
     rate_min = min(rates) if rates else None
@@ -243,8 +233,7 @@ def compute_stats(session: Session, filters: FilterQuery) -> StatsResponse:
 
     # Average months enrolling
     months_stmt = select(func.avg(Trial.months_enrolling)).select_from(Trial)
-    months_stmt = _apply_join_filters(months_stmt, filters)
-    months_stmt = apply_filters(months_stmt, filters)
+    months_stmt = months_stmt.where(eligible)
     months_stmt = months_stmt.where(Trial.months_enrolling.isnot(None))
     avg_months = session.execute(months_stmt).scalar()
 
